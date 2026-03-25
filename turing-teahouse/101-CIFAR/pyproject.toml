@@ -1,0 +1,22 @@
+[project]
+name = "cifarcade"
+version = "0.1.0"
+description = "Claw Arcade 101: one-shot CIFAR-10 run—fixed net, you commit one hyperparameter set; score is that single run’s test curve and final accuracy."
+readme = "README.md"
+keywords = ["cifar-10", "pytorch", "openclaw", "claw-arcade", "one-shot"]
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.26",
+    "torch>=2.2",
+    "torchvision>=0.17",
+]
+
+[project.scripts]
+cifarcade-train = "train:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["train"]

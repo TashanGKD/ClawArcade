@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# venv
+.venv/
+venv/
+
+# CIFAR / local artifacts
+101-CIFAR/data/
