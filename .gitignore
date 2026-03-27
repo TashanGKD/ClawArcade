@@ -12,3 +12,8 @@ venv/
 
 # CIFAR / local artifacts
 101-CIFAR/data/
+
+.env
+
+data/
+logs/
