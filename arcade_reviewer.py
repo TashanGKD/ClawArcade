@@ -7,7 +7,7 @@ TopicLab Arcade evaluator API.
 Current behavior:
 - Pull pending review items from `/api/v1/internal/arcade/review-queue`
 - Detect supported local cabinets
-- Execute the cabinet locally
+- Execute supported cabinets in parallel (default up to 3 concurrent subprocess runs; see `--max-concurrent`)
 - Post the evaluation result back to the matching Arcade branch (101-CIFAR post body uses a blank line between the three stdout lines so Markdown UIs keep SUCCESS on its own row)
 
 The first built-in runner supports:
@@ -16,11 +16,13 @@ The first built-in runner supports:
 Environment variables:
 - `ARCADE_BASE_URL` default: `http://127.0.0.1:8001`
 - `ARCADE_EVALUATOR_SECRET_KEY` required unless `--secret-key` is passed
+- `ARCADE_MAX_CONCURRENT` optional default for `--max-concurrent` (parallel evaluations)
 
 Examples:
     python3 arcade_reviewer.py --once
     python3 arcade_reviewer.py --once --dry-run
     python3 arcade_reviewer.py --loop --poll-interval 60
+    python3 arcade_reviewer.py --once --max-concurrent 3
     python3 arcade_reviewer.py --topic-id 274b47f9-f164-4b36-90a9-155b5387e604 --once
 """
 
@@ -29,6 +31,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import shutil
 import subprocess
 import sys
@@ -42,6 +45,7 @@ from typing import Any
 
 DEFAULT_BASE_URL = "http://127.0.0.1:8001"
 DEFAULT_TIMEOUT_SECONDS = 60 * 30
+DEFAULT_MAX_CONCURRENT = 3
 
 
 def log(message: str) -> None:
@@ -57,6 +61,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--limit", type=int, default=20, help="Max queue items fetched per poll")
     parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT_SECONDS, help="Per-task execution timeout in seconds")
     parser.add_argument("--poll-interval", type=int, default=60, help="Loop polling interval in seconds")
+    parser.add_argument(
+        "--max-concurrent",
+        type=int,
+        default=int(os.getenv("ARCADE_MAX_CONCURRENT", DEFAULT_MAX_CONCURRENT)),
+        help="Max parallel evaluation tasks (HTTP + local subprocess per item); default 3 or ARCADE_MAX_CONCURRENT",
+    )
     parser.add_argument("--once", action="store_true", help="Process the queue once and exit")
     parser.add_argument("--loop", action="store_true", help="Keep polling until interrupted")
     parser.add_argument("--dry-run", action="store_true", help="Do not execute or post evaluations")
@@ -188,6 +198,39 @@ def truncate_stderr(stderr: str, *, tail_lines: int = 20) -> list[str]:
     return lines[-tail_lines:]
 
 
+FORMAT_WRONG_BODY = "提交格式错误，请严格按照题目要求格式重新提交。"
+
+
+def format_wrong_evaluation(
+    *,
+    reason: str,
+    submission_config: dict[str, Any],
+    command_executed: str = "",
+    stdout_text: str = "",
+    stderr_text: str = "",
+    exit_code: int | None = None,
+    duration_seconds: float | None = None,
+) -> tuple[str, dict[str, Any]]:
+    """Evaluation payload when submission or stdout does not match the cabinet contract; still posted to Arcade."""
+    body = FORMAT_WRONG_BODY
+    result: dict[str, Any] = {
+        "passed": False,
+        "score": None,
+        "feedback": body,
+        "outcome": FORMAT_WRONG_BODY,
+        "cabinet": "turing-teahouse/101-CIFAR",
+        "format_error_reason": reason,
+        "submission_config": submission_config,
+        "command_executed": command_executed.strip() or None,
+        "exit_code": exit_code,
+        "duration_seconds": duration_seconds,
+        "stderr_tail": truncate_stderr(stderr_text),
+    }
+    if stdout_text:
+        result["stdout_preview"] = stdout_text[:4000]
+    return body, result
+
+
 def build_cifar_command(config: dict[str, Any]) -> list[str]:
     try:
         epochs = int(config["epochs"])
@@ -225,7 +268,14 @@ def run_101_cifar(item: dict[str, Any], *, repo_root: Path, timeout: int) -> tup
     if not cabinet_dir.exists():
         raise FileNotFoundError(f"cabinet directory not found: {cabinet_dir}")
 
-    command = build_cifar_command(config)
+    try:
+        command = build_cifar_command(config)
+    except ValueError as exc:
+        return format_wrong_evaluation(
+            reason=str(exc),
+            submission_config=config,
+        )
+
     start = time.time()
     completed = subprocess.run(
         command,
@@ -240,6 +290,18 @@ def run_101_cifar(item: dict[str, Any], *, repo_root: Path, timeout: int) -> tup
     line1 = stdout_lines[0].strip() if len(stdout_lines) >= 1 else ""
     line2 = stdout_lines[1].strip() if len(stdout_lines) >= 2 else ""
     line3 = stdout_lines[2].strip() if len(stdout_lines) >= 3 else ""
+    protocol_ok = len(stdout_lines) >= 3 and line3 in ("SUCCESS", "ERROR")
+    if not protocol_ok:
+        return format_wrong_evaluation(
+            reason="stdout 不符合约定：须为三行（epoch 列表、test 准确率列表、第三行为 SUCCESS 或 ERROR）",
+            submission_config=config,
+            command_executed=" ".join(command),
+            stdout_text=completed.stdout or "",
+            stderr_text=completed.stderr or "",
+            exit_code=completed.returncode,
+            duration_seconds=duration,
+        )
+
     eval_epochs = parse_csv_ints(line1)
     accuracies = parse_csv_floats(line2)
     success = line3 == "SUCCESS" and completed.returncode == 0
@@ -247,19 +309,8 @@ def run_101_cifar(item: dict[str, Any], *, repo_root: Path, timeout: int) -> tup
 
     # Post body: same three logical lines as train.py stdout; use blank lines between
     # so Markdown-style UIs render epochs / accuracies / SUCCESS on separate rows.
-    if len(stdout_lines) >= 3:
-        l0, l1, l2 = (stdout_lines[i].strip() for i in range(3))
-        body = f"{l0}\n\n{l1}\n\n{l2}"
-    elif line3 == "ERROR":
-        body = (
-            "Evaluation failed. The cabinet returned ERROR. "
-            "See the structured result for partial checkpoints, exit code, and stderr tail."
-        )
-    else:
-        body = (
-            "Evaluation finished with an unexpected output format. "
-            "See the structured result for stdout, stderr, and exit code."
-        )
+    l0, l1, l2 = (stdout_lines[i].strip() for i in range(3))
+    body = f"{l0}\n\n{l1}\n\n{l2}"
 
     result = {
         "passed": success,
@@ -345,6 +396,29 @@ def process_item(
     return True
 
 
+def process_item_safe(
+    item: dict[str, Any],
+    *,
+    base_url: str,
+    secret_key: str,
+    repo_root: Path,
+    timeout: int,
+    dry_run: bool,
+) -> bool:
+    try:
+        return process_item(
+            item,
+            base_url=base_url,
+            secret_key=secret_key,
+            repo_root=repo_root,
+            timeout=timeout,
+            dry_run=dry_run,
+        )
+    except Exception as exc:  # noqa: BLE001
+        log(f"evaluation failed: {exc}")
+        return False
+
+
 def run_once(args: argparse.Namespace) -> int:
     secret_key = require_secret(args.secret_key)
     repo_root = Path(args.repo_root).resolve()
@@ -358,18 +432,26 @@ def run_once(args: argparse.Namespace) -> int:
         log("queue is empty")
         return 0
 
+    max_workers = max(1, args.max_concurrent)
+    pool = min(max_workers, len(items))
     processed = 0
-    for item in items:
-        if process_item(
-            item,
-            base_url=args.base_url,
-            secret_key=secret_key,
-            repo_root=repo_root,
-            timeout=args.timeout,
-            dry_run=args.dry_run,
-        ):
-            processed += 1
-    log(f"done: processed={processed} total_items={len(items)}")
+    with ThreadPoolExecutor(max_workers=pool) as executor:
+        futures = [
+            executor.submit(
+                process_item_safe,
+                item,
+                base_url=args.base_url,
+                secret_key=secret_key,
+                repo_root=repo_root,
+                timeout=args.timeout,
+                dry_run=args.dry_run,
+            )
+            for item in items
+        ]
+        for future in as_completed(futures):
+            if future.result():
+                processed += 1
+    log(f"done: processed={processed} total_items={len(items)} max_concurrent={max_workers}")
     return 0
 
 
