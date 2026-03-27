@@ -17,6 +17,11 @@ Environment variables:
 - `ARCADE_BASE_URL` default: `http://127.0.0.1:8001`
 - `ARCADE_EVALUATOR_SECRET_KEY` required unless `--secret-key` is passed
 - `ARCADE_MAX_CONCURRENT` optional default for `--max-concurrent` (parallel evaluations)
+- `ARCADE_LOG_DIR` optional override for `--log-dir` (daily `arcade_reviewer_*.log`)
+
+Logs:
+- Each line is timestamped (Beijing, ms); additionally appended to a **daily** file
+  `<log-dir>/arcade_reviewer_YYYY-MM-DD.log` (Beijing calendar day; see `--log-dir`).
 
 Examples:
     python3 arcade_reviewer.py --once
@@ -29,9 +34,13 @@ Examples:
 from __future__ import annotations
 
 import argparse
+import atexit
 import json
 import os
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
+from zoneinfo import ZoneInfo
 import shutil
 import subprocess
 import sys
@@ -40,16 +49,75 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
-from typing import Any
+from typing import Any, TextIO
 
 
 DEFAULT_BASE_URL = "http://127.0.0.1:8001"
 DEFAULT_TIMEOUT_SECONDS = 60 * 30
 DEFAULT_MAX_CONCURRENT = 3
 
+_LOG_TZ = ZoneInfo("Asia/Shanghai")
+
+_log_lock = threading.Lock()
+_log_dir: Path = Path(__file__).resolve().parent / "logs"
+_log_file_date: str | None = None
+_log_fp: TextIO | None = None
+
+
+def configure_log_dir(log_dir: Path) -> None:
+    """Call once from main() before any log()."""
+    global _log_dir
+    _log_dir = log_dir.resolve()
+
+
+def _close_daily_log_file() -> None:
+    global _log_fp, _log_file_date
+    with _log_lock:
+        if _log_fp is not None:
+            try:
+                _log_fp.close()
+            except OSError:
+                pass
+            _log_fp = None
+        _log_file_date = None
+
+
+def _ensure_daily_log_file() -> None:
+    """Rotate log file when the Beijing date changes; caller must hold _log_lock."""
+    global _log_file_date, _log_fp
+    beijing_date = datetime.now(_LOG_TZ).strftime("%Y-%m-%d")
+    if beijing_date == _log_file_date and _log_fp is not None:
+        return
+    if _log_fp is not None:
+        try:
+            _log_fp.close()
+        except OSError:
+            pass
+        _log_fp = None
+    _log_file_date = beijing_date
+    try:
+        _log_dir.mkdir(parents=True, exist_ok=True)
+        path = _log_dir / f"arcade_reviewer_{beijing_date}.log"
+        _log_fp = open(path, "a", encoding="utf-8")
+    except OSError:
+        _log_fp = None
+
+
+def _log_timestamp_beijing() -> str:
+    now = datetime.now(_LOG_TZ)
+    ms = now.microsecond // 1000
+    # Asia/Shanghai, no DST — offset fixed +08:00
+    return f"{now.strftime('%Y-%m-%d %H:%M:%S')}.{ms:03d} +08:00"
+
 
 def log(message: str) -> None:
-    print(f"[arcade-reviewer] {message}", flush=True)
+    line = f"[{_log_timestamp_beijing()}] [arcade-reviewer] {message}"
+    with _log_lock:
+        _ensure_daily_log_file()
+        if _log_fp is not None:
+            _log_fp.write(line + "\n")
+            _log_fp.flush()
+    print(line, flush=True)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -57,6 +125,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--base-url", default=os.getenv("ARCADE_BASE_URL", DEFAULT_BASE_URL), help="TopicLab backend base URL")
     parser.add_argument("--secret-key", default=os.getenv("ARCADE_EVALUATOR_SECRET_KEY", ""), help="Arcade evaluator secret key")
     parser.add_argument("--repo-root", default=str(Path(__file__).resolve().parent), help="ClawArcade repository root")
+    parser.add_argument(
+        "--log-dir",
+        default=os.getenv("ARCADE_LOG_DIR", ""),
+        help="Directory for daily log files arcade_reviewer_YYYY-MM-DD.log (Beijing date); default <repo-root>/logs",
+    )
     parser.add_argument("--topic-id", default="", help="Only review one Arcade topic")
     parser.add_argument("--limit", type=int, default=20, help="Max queue items fetched per poll")
     parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT_SECONDS, help="Per-task execution timeout in seconds")
@@ -457,6 +530,11 @@ def run_once(args: argparse.Namespace) -> int:
 
 def main() -> int:
     args = build_parser().parse_args()
+    repo_root = Path(args.repo_root).resolve()
+    log_dir = Path(args.log_dir).resolve() if str(args.log_dir).strip() else repo_root / "logs"
+    configure_log_dir(log_dir)
+    atexit.register(_close_daily_log_file)
+
     if args.loop and args.once:
         raise SystemExit("Use either --once or --loop, not both.")
     if not args.loop:
