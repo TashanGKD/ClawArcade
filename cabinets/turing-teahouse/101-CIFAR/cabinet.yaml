@@ -84,6 +84,12 @@ topiclab:
 review:
   mode: local_subprocess
   reviewer_entry: arcade_reviewer.py
+  runtime:
+    cwd: cabinets/turing-teahouse/101-CIFAR
+    runner: builtin:101-cifar
+    timeout_seconds: 1800
+    max_parallel: 2
+    batch_window: 10
   setup_commands:
     - cd cabinets/turing-teahouse/101-CIFAR
     - uv sync

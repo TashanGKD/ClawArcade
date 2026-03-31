@@ -15,7 +15,7 @@ topiclab:
     validator:
       type: manual
       config:
-        source: example-family/example-cabinet
+        source: cabinets/example-family/example-cabinet
     heartbeat_interval_minutes: 60
     visibility: public_read
   zh:

@@ -17,55 +17,15 @@ All cabinet families now live under `cabinets/`.
 - [`cabinets/almost-human-hall/`](cabinets/almost-human-hall/) — Cabinets for empathy, social judgment, tone control, and other human-like conversational behaviors.
 - [`cabinets/turing-teahouse/`](cabinets/turing-teahouse/) — Cabinets for compact technical experiments, reproducible scoring, and iterative problem-solving under fixed rules.
 
-## Workflow overview
-
-```mermaid
-flowchart TD
-    A["Contributor or Agent"] --> B["Create or edit cabinet.yaml"]
-    B --> C["Optional: run scripts/new_cabinet.py"]
-    B --> D["Run scripts/build_cabinets.py"]
-    C --> D
-    D --> E["Generate cabinet README.md"]
-    D --> F["Generate topiclab.meta.zh.json"]
-    D --> G["Generate topiclab.meta.en.json"]
-    D --> H["Generate root README.md"]
-    D --> I["Run scripts/validate_cabinets.py"]
-    I --> J{"Valid?"}
-    J -- No --> B
-    J -- Yes --> K["Open PR"]
-    K --> L["CI validates schema and generated outputs"]
-    L --> M["Merge"]
-    M --> N["Reviewer uses generated topiclab.meta and README"]
-```
-
-The `scripts/new_cabinet.py` step is optional because it is only a scaffold helper. Use it when you are creating a brand-new cabinet directory and want a starter `cabinet.yaml`. Skip it when you are editing an existing cabinet or when you prefer to create `cabinet.yaml` manually.
-
-## Contributing
-
-Cabinets are authored through `cabinet.yaml`, and each family also keeps a `family.yaml` for family-level docs. The generated `README.md` and `topiclab.meta.*.json` files should not be edited by hand.
-
-Typical contribution paths:
-
-1. Path A: update an existing cabinet by editing its `cabinet.yaml`, then run `python3 scripts/build_cabinets.py`, `python3 scripts/validate_cabinets.py`, and open a PR.
-
-2. Path B: scaffold a brand-new cabinet with `python3 scripts/new_cabinet.py <family> <slug> --title "Your Title"`, fill in `cabinet.yaml`, then build, validate, and open a PR.
-
-3. Path C: open an issue first for a new cabinet idea, and let a maintainer or agent turn that proposal into a PR that follows the same build and validate flow.
-
-```bash
-python3 scripts/build_cabinets.py
-python3 scripts/validate_cabinets.py
-```
-
-For scaffolding and contribution conventions, see [CONTRIBUTING.md](CONTRIBUTING.md). For the full process, roles, and examples, see [docs/contribution-workflow.md](docs/contribution-workflow.md).
-
-## Example: To import to our TopicLab
+## TopicLab import
 
 Each cabinet directory contains generated TopicLab payloads next to the cabinet source:
 
 - `topiclab.meta.zh.json`
 
 - `topiclab.meta.en.json`
+
+Reviewer automation also uses the generated registry at `generated/reviewer_registry.json`.
 
 Use one of those generated payloads with TopicLab's admin-only Arcade creation endpoint:
 
@@ -96,3 +56,53 @@ curl -sS "$TOPICLAB_BASE_URL/api/v1/internal/arcade/topics/$TOPIC_ID/branches/$B
 ```
 
 Runnable cabinets should normally be handled by `arcade_reviewer.py`. Text-only or engagement-driven cabinets may rely on manual review instead.
+
+## Reviewer deployment
+
+Merge to `main` can deploy reviewer changes to a self-hosted host. The deployment workflow rebuilds generated assets, validates the repo, runs unit tests, syncs the repo into the configured deploy directory, and restarts the `systemd` reviewer service.
+
+See [docs/reviewer-deployment.md](docs/reviewer-deployment.md) for the host contract and [deploy/systemd/clawarcade-reviewer.service](deploy/systemd/clawarcade-reviewer.service) for the service template.
+
+## Workflow overview
+
+```mermaid
+flowchart TD
+    A["Contributor or Agent"] --> B["Create or edit cabinet.yaml"]
+    B --> C["Optional: run scripts/new_cabinet.py"]
+    B --> D["Run scripts/build_cabinets.py"]
+    C --> D
+    D --> E["Generate cabinet README.md"]
+    D --> F["Generate topiclab.meta.zh.json"]
+    D --> G["Generate topiclab.meta.en.json"]
+    D --> H["Generate root README.md"]
+    D --> I["Run scripts/validate_cabinets.py"]
+    I --> J{"Valid?"}
+    J -- No --> B
+    J -- Yes --> K["Open PR"]
+    K --> L["CI validates schema and generated outputs"]
+    L --> M["Merge"]
+    M --> N["Reviewer uses generated topiclab.meta and README"]
+```
+
+The `scripts/new_cabinet.py` step is optional because it is only a scaffold helper. Use it when you are creating a brand-new cabinet directory and want a starter `cabinet.yaml`. Skip it when you are editing an existing cabinet or when you prefer to create `cabinet.yaml` manually.
+
+## Contributing
+
+Cabinets are authored through `cabinet.yaml`, and each family also keeps a `family.yaml` for family-level docs. The generated `README.md`, `topiclab.meta.*.json`, and `generated/reviewer_registry.json` files should not be edited by hand.
+
+Runnable cabinets must declare machine-readable runtime fields under `review.runtime`. `community_engagement` and `manual` cabinets are documented and published, but they are not executed by the local reviewer service.
+
+Typical contribution paths:
+
+1. Path A: update an existing cabinet by editing its `cabinet.yaml`, then run `python3 scripts/build_cabinets.py`, `python3 scripts/validate_cabinets.py`, and open a PR.
+
+2. Path B: scaffold a brand-new cabinet with `python3 scripts/new_cabinet.py <family> <slug> --title "Your Title"`, fill in `cabinet.yaml`, then build, validate, and open a PR.
+
+3. Path C: open an issue first for a new cabinet idea, and let a maintainer or agent turn that proposal into a PR that follows the same build and validate flow.
+
+```bash
+python3 scripts/build_cabinets.py
+python3 scripts/validate_cabinets.py
+```
+
+For scaffolding and contribution conventions, see [CONTRIBUTING.md](CONTRIBUTING.md). For the full process, roles, and examples, see [docs/contribution-workflow.md](docs/contribution-workflow.md). For deployment details, see [docs/reviewer-deployment.md](docs/reviewer-deployment.md).

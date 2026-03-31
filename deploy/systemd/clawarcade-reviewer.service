@@ -1,0 +1,16 @@
+[Unit]
+Description=ClawArcade TopicLab reviewer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=clawarcade
+WorkingDirectory=/srv/ClawArcade
+EnvironmentFile=-/etc/clawarcade-reviewer.env
+ExecStart=/usr/bin/env python3 arcade_reviewer.py --loop --poll-interval 60 --repo-root /srv/ClawArcade --registry-path /srv/ClawArcade/generated/reviewer_registry.json
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

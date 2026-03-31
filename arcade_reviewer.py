@@ -6,11 +6,11 @@ TopicLab Arcade evaluator API.
 
 Current behavior:
 - Pull pending review items from `/api/v1/internal/arcade/review-queue`
-- Detect supported local cabinets
+- Load generated reviewer registry entries for supported local cabinets
 - Execute supported cabinets in parallel (default up to 3 concurrent subprocess runs; see `--max-concurrent`)
 - Post the evaluation result back to the matching Arcade branch (101-CIFAR post body uses a blank line between the three stdout lines so Markdown UIs keep SUCCESS on its own row)
 
-The first built-in runner supports:
+The first built-in runtime supports:
 - `cabinets/turing-teahouse/101-CIFAR`
 
 Environment variables:
@@ -55,6 +55,7 @@ from typing import Any, TextIO
 DEFAULT_BASE_URL = "http://127.0.0.1:8001"
 DEFAULT_TIMEOUT_SECONDS = 60 * 30
 DEFAULT_MAX_CONCURRENT = 3
+DEFAULT_REVIEWER_REGISTRY = "generated/reviewer_registry.json"
 
 _LOG_TZ = ZoneInfo("Asia/Shanghai")
 
@@ -125,6 +126,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--base-url", default=os.getenv("ARCADE_BASE_URL", DEFAULT_BASE_URL), help="TopicLab backend base URL")
     parser.add_argument("--secret-key", default=os.getenv("ARCADE_EVALUATOR_SECRET_KEY", ""), help="Arcade evaluator secret key")
     parser.add_argument("--repo-root", default=str(Path(__file__).resolve().parent), help="ClawArcade repository root")
+    parser.add_argument(
+        "--registry-path",
+        default=DEFAULT_REVIEWER_REGISTRY,
+        help="Path to the generated reviewer registry, relative to repo root by default",
+    )
     parser.add_argument(
         "--log-dir",
         default=os.getenv("ARCADE_LOG_DIR", ""),
@@ -234,6 +240,42 @@ def get_submission_post(item: dict[str, Any]) -> dict[str, Any]:
     return post if isinstance(post, dict) else {}
 
 
+def get_cabinet_source(item: dict[str, Any]) -> str:
+    arcade = get_arcade_meta(item)
+    validator = arcade.get("validator") or {}
+    validator_config = validator.get("config") if isinstance(validator, dict) else {}
+    if not isinstance(validator_config, dict):
+        return ""
+    source = validator_config.get("source")
+    return str(source).strip() if source else ""
+
+
+def load_reviewer_registry(path: Path) -> dict[str, dict[str, Any]]:
+    if not path.exists():
+        raise FileNotFoundError(f"reviewer registry not found: {path}")
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    cabinets = payload.get("cabinets")
+    if payload.get("schema_version") != 1 or not isinstance(cabinets, dict):
+        raise ValueError(f"invalid reviewer registry format: {path}")
+
+    normalized: dict[str, dict[str, Any]] = {}
+    for source, entry in cabinets.items():
+        if not isinstance(source, str) or not source.strip():
+            raise ValueError(f"invalid reviewer registry source key in {path}")
+        if not isinstance(entry, dict):
+            raise ValueError(f"invalid reviewer registry entry for {source!r} in {path}")
+        runtime = entry.get("runtime")
+        runner = runtime.get("runner") if isinstance(runtime, dict) else None
+        cwd = runtime.get("cwd") if isinstance(runtime, dict) else None
+        if not isinstance(runner, str) or not runner.strip():
+            raise ValueError(f"invalid reviewer runtime runner for {source!r} in {path}")
+        if not isinstance(cwd, str) or not cwd.strip():
+            raise ValueError(f"invalid reviewer runtime cwd for {source!r} in {path}")
+        normalized[source] = entry
+    return normalized
+
+
 def parse_submission_config(item: dict[str, Any]) -> dict[str, Any]:
     submission = get_submission_post(item)
     metadata = submission.get("metadata") or {}
@@ -276,6 +318,7 @@ FORMAT_WRONG_BODY = "提交格式错误，请严格按照题目要求格式重�
 
 def format_wrong_evaluation(
     *,
+    cabinet_source: str,
     reason: str,
     submission_config: dict[str, Any],
     command_executed: str = "",
@@ -291,7 +334,7 @@ def format_wrong_evaluation(
         "score": None,
         "feedback": body,
         "outcome": FORMAT_WRONG_BODY,
-        "cabinet": "cabinets/turing-teahouse/101-CIFAR",
+        "cabinet": cabinet_source,
         "format_error_reason": reason,
         "submission_config": submission_config,
         "command_executed": command_executed.strip() or None,
@@ -335,9 +378,17 @@ def build_cifar_command(config: dict[str, Any]) -> list[str]:
     ]
 
 
-def run_101_cifar(item: dict[str, Any], *, repo_root: Path, timeout: int) -> tuple[str, dict[str, Any]]:
+def run_101_cifar(
+    item: dict[str, Any],
+    *,
+    repo_root: Path,
+    registry_entry: dict[str, Any],
+    timeout: int,
+) -> tuple[str, dict[str, Any]]:
     config = parse_submission_config(item)
-    cabinet_dir = repo_root / "cabinets" / "turing-teahouse" / "101-CIFAR"
+    cabinet_source = str(get_cabinet_source(item) or registry_entry.get("source") or "")
+    runtime = registry_entry.get("runtime") or {}
+    cabinet_dir = repo_root / str(runtime.get("cwd") or "")
     if not cabinet_dir.exists():
         raise FileNotFoundError(f"cabinet directory not found: {cabinet_dir}")
 
@@ -345,6 +396,7 @@ def run_101_cifar(item: dict[str, Any], *, repo_root: Path, timeout: int) -> tup
         command = build_cifar_command(config)
     except ValueError as exc:
         return format_wrong_evaluation(
+            cabinet_source=cabinet_source,
             reason=str(exc),
             submission_config=config,
         )
@@ -366,6 +418,7 @@ def run_101_cifar(item: dict[str, Any], *, repo_root: Path, timeout: int) -> tup
     protocol_ok = len(stdout_lines) >= 3 and line3 in ("SUCCESS", "ERROR")
     if not protocol_ok:
         return format_wrong_evaluation(
+            cabinet_source=cabinet_source,
             reason="stdout 不符合约定：须为三行（epoch 列表、test 准确率列表、第三行为 SUCCESS 或 ERROR）",
             submission_config=config,
             command_executed=" ".join(command),
@@ -389,7 +442,7 @@ def run_101_cifar(item: dict[str, Any], *, repo_root: Path, timeout: int) -> tup
         "passed": success,
         "score": final_score,
         "feedback": body,
-        "cabinet": "cabinets/turing-teahouse/101-CIFAR",
+        "cabinet": cabinet_source,
         "command_executed": " ".join(command),
         "submission_config": config,
         "eval_epochs": eval_epochs,
@@ -402,28 +455,36 @@ def run_101_cifar(item: dict[str, Any], *, repo_root: Path, timeout: int) -> tup
     return body, result
 
 
-def detect_runner(item: dict[str, Any], repo_root: Path) -> str | None:
-    topic = item.get("topic") or {}
-    title = str(topic.get("title") or "")
-    arcade = get_arcade_meta(item)
-    validator = arcade.get("validator") or {}
-    validator_config = validator.get("config") if isinstance(validator, dict) else {}
-    source = ""
-    if isinstance(validator_config, dict):
-        source = str(validator_config.get("source") or "")
-
-    if "101-CIFAR" in title or "101-CIFAR" in source:
-        candidate = repo_root / "cabinets" / "turing-teahouse" / "101-CIFAR"
-        if candidate.exists():
-            return "101-CIFAR"
-    return None
+BUILTIN_RUNNERS = {
+    "builtin:101-cifar": run_101_cifar,
+}
 
 
-def evaluate_item(item: dict[str, Any], *, repo_root: Path, timeout: int) -> tuple[str, dict[str, Any]] | None:
-    runner = detect_runner(item, repo_root)
-    if runner == "101-CIFAR":
-        return run_101_cifar(item, repo_root=repo_root, timeout=timeout)
-    return None
+def evaluate_item(
+    item: dict[str, Any],
+    *,
+    repo_root: Path,
+    registry: dict[str, dict[str, Any]],
+    timeout: int,
+) -> tuple[str, dict[str, Any]] | None:
+    source = get_cabinet_source(item)
+    if not source:
+        return None
+
+    registry_entry = registry.get(source)
+    if registry_entry is None:
+        return None
+
+    runtime = registry_entry.get("runtime") or {}
+    runner_name = str(runtime.get("runner") or "").strip()
+    runner = BUILTIN_RUNNERS.get(runner_name)
+    if runner is None:
+        raise ValueError(f"unsupported runner {runner_name!r} for cabinet {source!r}")
+
+    effective_timeout = int(runtime.get("timeout_seconds") or timeout)
+    runner_entry = dict(registry_entry)
+    runner_entry["source"] = source
+    return runner(item, repo_root=repo_root, registry_entry=runner_entry, timeout=effective_timeout)
 
 
 def process_item(
@@ -432,6 +493,7 @@ def process_item(
     base_url: str,
     secret_key: str,
     repo_root: Path,
+    registry: dict[str, dict[str, Any]],
     timeout: int,
     dry_run: bool,
 ) -> bool:
@@ -441,13 +503,14 @@ def process_item(
     branch_root_post_id = str(item.get("branch_root_post_id") or "")
     submission_post_id = str(submission.get("id") or "")
     title = str(topic.get("title") or "<untitled>")
+    source = get_cabinet_source(item) or "<unknown-source>"
     if not topic_id or not branch_root_post_id or not submission_post_id:
         log(f"skip malformed queue item for topic={title}")
         return False
 
-    evaluation = evaluate_item(item, repo_root=repo_root, timeout=timeout)
+    evaluation = evaluate_item(item, repo_root=repo_root, registry=registry, timeout=timeout)
     if evaluation is None:
-        log(f"skip unsupported task: {title}")
+        log(f"skip unsupported task: title={title} source={source}")
         return False
 
     body, result = evaluation
@@ -475,6 +538,7 @@ def process_item_safe(
     base_url: str,
     secret_key: str,
     repo_root: Path,
+    registry: dict[str, dict[str, Any]],
     timeout: int,
     dry_run: bool,
 ) -> bool:
@@ -484,6 +548,7 @@ def process_item_safe(
             base_url=base_url,
             secret_key=secret_key,
             repo_root=repo_root,
+            registry=registry,
             timeout=timeout,
             dry_run=dry_run,
         )
@@ -492,7 +557,7 @@ def process_item_safe(
         return False
 
 
-def run_once(args: argparse.Namespace) -> int:
+def run_once(args: argparse.Namespace, *, registry: dict[str, dict[str, Any]]) -> int:
     secret_key = require_secret(args.secret_key)
     repo_root = Path(args.repo_root).resolve()
     items = fetch_review_queue(
@@ -516,6 +581,7 @@ def run_once(args: argparse.Namespace) -> int:
                 base_url=args.base_url,
                 secret_key=secret_key,
                 repo_root=repo_root,
+                registry=registry,
                 timeout=args.timeout,
                 dry_run=args.dry_run,
             )
@@ -532,6 +598,13 @@ def main() -> int:
     args = build_parser().parse_args()
     repo_root = Path(args.repo_root).resolve()
     log_dir = Path(args.log_dir).resolve() if str(args.log_dir).strip() else repo_root / "logs"
+    registry_path = Path(args.registry_path)
+    if not registry_path.is_absolute():
+        registry_path = repo_root / registry_path
+    try:
+        registry = load_reviewer_registry(registry_path)
+    except Exception as exc:  # noqa: BLE001
+        raise SystemExit(f"failed to load reviewer registry {registry_path}: {exc}") from exc
     configure_log_dir(log_dir)
     atexit.register(_close_daily_log_file)
 
@@ -541,11 +614,11 @@ def main() -> int:
         args.once = True
 
     if args.once:
-        return run_once(args)
+        return run_once(args, registry=registry)
 
     while True:
         try:
-            run_once(args)
+            run_once(args, registry=registry)
         except KeyboardInterrupt:
             log("stopped")
             return 130

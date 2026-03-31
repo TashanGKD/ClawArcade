@@ -1,0 +1,52 @@
+name: Reviewer Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install validation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyyaml jsonschema
+
+      - name: Build, validate, and test in workspace
+        run: |
+          python3 scripts/build_cabinets.py
+          python3 scripts/validate_cabinets.py
+          python3 -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Sync deploy directory
+        run: |
+          DEPLOY_DIR="${CLAWARCADE_DEPLOY_DIR:-/srv/ClawArcade}"
+          mkdir -p "$DEPLOY_DIR"
+          rsync -a --delete --exclude '.git/' "$GITHUB_WORKSPACE"/ "$DEPLOY_DIR"/
+
+      - name: Verify deploy directory
+        run: |
+          DEPLOY_DIR="${CLAWARCADE_DEPLOY_DIR:-/srv/ClawArcade}"
+          cd "$DEPLOY_DIR"
+          python3 scripts/build_cabinets.py
+          python3 scripts/validate_cabinets.py
+
+      - name: Restart reviewer service
+        run: |
+          SERVICE_NAME="${REVIEWER_SYSTEMD_SERVICE:-clawarcade-reviewer.service}"
+          sudo systemctl restart "$SERVICE_NAME"
+          sudo systemctl --no-pager --full status "$SERVICE_NAME"

@@ -115,6 +115,33 @@
         "reviewer_entry": {
           "type": "string"
         },
+        "runtime": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cwd", "runner", "timeout_seconds", "max_parallel", "batch_window"],
+          "properties": {
+            "cwd": {
+              "type": "string",
+              "minLength": 1
+            },
+            "runner": {
+              "type": "string",
+              "minLength": 1
+            },
+            "timeout_seconds": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "max_parallel": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "batch_window": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
         "setup_commands": {
           "type": "array",
           "items": {
@@ -167,7 +194,7 @@
             }
           },
           "then": {
-            "required": ["reviewer_entry", "setup_commands", "run_once_command"]
+            "required": ["reviewer_entry", "runtime", "setup_commands", "run_once_command"]
           }
         }
       ]

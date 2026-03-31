@@ -42,6 +42,15 @@ class CabinetScriptTests(unittest.TestCase):
         self.assertIn("arcade", payload["metadata"])
         self.assertIn("prompt", payload["metadata"]["arcade"])
 
+    def test_render_reviewer_registry_only_includes_local_subprocess_cabinets(self) -> None:
+        cabinets = self.build_module.load_all_cabinets()
+        payload = json.loads(self.build_module.render_reviewer_registry(cabinets))
+        self.assertEqual(payload["schema_version"], 1)
+        self.assertIn("cabinets/turing-teahouse/101-CIFAR", payload["cabinets"])
+        self.assertNotIn("cabinets/almost-human-hall/101-Comforting-a-Graduate-Student", payload["cabinets"])
+        entry = payload["cabinets"]["cabinets/turing-teahouse/101-CIFAR"]
+        self.assertEqual(entry["runtime"]["runner"], "builtin:101-cifar")
+
     def test_render_root_readme_uses_family_yaml_summary(self) -> None:
         cabinets = self.build_module.load_all_cabinets()
         family_configs = self.build_module.load_family_configs(
@@ -71,7 +80,7 @@ class CabinetScriptTests(unittest.TestCase):
             template_path = template_root / "cabinet.template.yaml"
             template_path.write_text(
                 "schema_version: 1\ncabinet:\n  id: example-cabinet\n  family: example-family\n  title: Example Cabinet\n  summary: One-line summary for repository lists and generated docs.\n"
-                "topiclab:\n  shared:\n    board: reasoning\n    difficulty: medium\n    task_type: plain_text\n    output_mode: plain_text\n    validator:\n      type: manual\n    heartbeat_interval_minutes: 60\n    visibility: public_read\n"
+                "topiclab:\n  shared:\n    board: reasoning\n    difficulty: medium\n    task_type: plain_text\n    output_mode: plain_text\n    validator:\n      type: manual\n      config:\n        source: cabinets/example-family/example-cabinet\n    heartbeat_interval_minutes: 60\n    visibility: public_read\n"
                 "  zh:\n    title: 示例\n    body: 中文\n    tags: [示例]\n    prompt: 中文 prompt\n    rules: 中文 rules\n"
                 "  en:\n    title: Example\n    body: English\n    tags: [Example]\n    prompt: English prompt\n    rules: English rules\n"
                 "review:\n  mode: manual\nreadme:\n  sections:\n    - title: Problem brief\n      body: Example body\n",
@@ -125,7 +134,7 @@ topiclab:
     validator:
       type: manual
       config:
-        source: demo-family/001-demo
+        source: cabinets/demo-family/001-demo
     heartbeat_interval_minutes: 60
     visibility: public_read
   zh:
@@ -157,6 +166,70 @@ readme:
 
             exit_code = self.build_module.build(check=True)
             self.assertEqual(exit_code, 1)
+
+    def test_local_subprocess_requires_machine_runtime_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "cabinets" / "demo-family" / "001-demo").mkdir(parents=True)
+            (root / "schemas").mkdir()
+            (root / "arcade_reviewer.py").write_text("# test stub\n", encoding="utf-8")
+            schema = json.loads((REPO_ROOT / "schemas" / "cabinet.schema.json").read_text(encoding="utf-8"))
+            (root / "schemas" / "cabinet.schema.json").write_text(json.dumps(schema), encoding="utf-8")
+            (root / "cabinets" / "demo-family" / "family.yaml").write_text(
+                "title: Demo Family\nsummary: Demo family summary.\n",
+                encoding="utf-8",
+            )
+            (root / "cabinets" / "demo-family" / "001-demo" / "cabinet.yaml").write_text(
+                """schema_version: 1
+cabinet:
+  id: demo-cabinet
+  family: demo-family
+  title: Demo Cabinet
+  summary: Demo summary.
+topiclab:
+  shared:
+    board: reasoning
+    difficulty: medium
+    task_type: plain_text
+    output_mode: plain_text
+    validator:
+      type: custom
+      config:
+        source: cabinets/demo-family/001-demo
+    heartbeat_interval_minutes: 60
+    visibility: public_read
+  zh:
+    title: 示例题
+    body: 中文 body
+    tags: [示例]
+    prompt: 中文 prompt
+    rules: 中文 rules
+  en:
+    title: Demo task
+    body: English body
+    tags: [demo]
+    prompt: English prompt
+    rules: English rules
+review:
+  mode: local_subprocess
+  reviewer_entry: arcade_reviewer.py
+  setup_commands:
+    - echo prepare
+  run_once_command: python3 arcade_reviewer.py --once
+readme:
+  sections:
+    - title: Problem brief
+      body: Demo body
+""",
+                encoding="utf-8",
+            )
+
+            self.build_module.REPO_ROOT = root
+            self.build_module.CABINETS_ROOT = root / "cabinets"
+            self.build_module.SCHEMA_PATH = root / "schemas" / "cabinet.schema.json"
+
+            with self.assertRaises(SystemExit):
+                self.build_module.load_all_cabinets()
 
 
 if __name__ == "__main__":

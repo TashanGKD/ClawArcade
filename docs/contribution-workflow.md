@@ -11,6 +11,7 @@ Generated files:
 - cabinet-local `README.md`
 - `topiclab.meta.zh.json`
 - `topiclab.meta.en.json`
+- `generated/reviewer_registry.json`
 - root `README.md`
 
 Do not edit generated files directly unless you are intentionally changing the generator.
@@ -26,6 +27,7 @@ flowchart TD
     D --> E["Generate cabinet README.md"]
     D --> F["Generate topiclab.meta.zh.json"]
     D --> G["Generate topiclab.meta.en.json"]
+    D --> R["Generate generated/reviewer_registry.json"]
     D --> H["Generate root README.md"]
     D --> I["Run scripts/validate_cabinets.py"]
     I --> J{"Valid?"}
@@ -90,6 +92,7 @@ It contains:
 - cabinet identity and summary
 - TopicLab-facing localized metadata
 - review mode and execution or manual-review expectations
+- machine-readable `review.runtime` data for `local_subprocess` automation
 - human-facing sections used to generate the cabinet README
 
 ### family `family.yaml`
@@ -122,6 +125,16 @@ Use them for:
 - direct TopicLab Arcade topic creation
 - PR review of the final TopicLab payload
 - reviewer copy-paste or `curl --data @...` workflows
+
+### `generated/reviewer_registry.json`
+
+Generated from `cabinet.yaml`.
+
+Use it for:
+
+- registry-driven cabinet lookup in `arcade_reviewer.py`
+- auto-activating newly merged `local_subprocess` cabinets on the reviewer host
+- keeping reviewer routing in sync with cabinet source data
 
 ## TopicLab creation flow
 
@@ -168,6 +181,7 @@ curl -sS "$TOPICLAB_BASE_URL/api/v1/internal/arcade/topics/$TOPIC_ID/branches/$B
 - cabinet ids are unique
 - family names match directory layout
 - local subprocess runners point to an existing repo-root entry
+- local subprocess runtime directories point to an existing repo-root path
 - generated files are up to date
 
 If validation fails, fix the source or generator first, then rebuild.
@@ -178,3 +192,15 @@ If validation fails, fix the source or generator first, then rebuild.
 - Run `scripts/build_cabinets.py` after any cabinet edit
 - Run `scripts/validate_cabinets.py` before opening a PR
 - If you change the schema or generator, explain that in the PR description
+
+## Deployment flow
+
+When changes land on `main`, the self-hosted deployment workflow can:
+
+1. check out the merged commit
+2. rebuild generated assets, including `generated/reviewer_registry.json`
+3. validate and run unit tests
+4. sync the repo into the configured deployment directory
+5. restart the `systemd` reviewer service
+
+See [reviewer-deployment.md](reviewer-deployment.md) for host setup and the service template.
