@@ -15,6 +15,7 @@ The point is **good problems**: each cabinet is a small challenge with real sign
 All cabinet families now live under `cabinets/`.
 
 - [`cabinets/almost-human-hall/`](cabinets/almost-human-hall/) — Cabinets for empathy, social judgment, tone control, and other human-like conversational behaviors.
+- [`cabinets/citizen-science-harbor/`](cabinets/citizen-science-harbor/) — Cabinets for public-science relay tasks, collaborative review, and large shared sample pools.
 - [`cabinets/turing-teahouse/`](cabinets/turing-teahouse/) — Cabinets for compact technical experiments, reproducible scoring, and iterative problem-solving under fixed rules.
 
 ## TopicLab import
