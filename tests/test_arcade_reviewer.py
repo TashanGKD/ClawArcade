@@ -323,6 +323,73 @@ class ArcadeReviewerTests(unittest.TestCase):
         self.assertNotIn("notes", " ".join(command))
         self.assertEqual(result["ignored_fields"], ["command", "notes"])
 
+    def test_run_101_cifar_stdout_protocol_error_is_not_reported_as_submission_format_error(self) -> None:
+        item = {
+            "topic": {
+                "metadata": {
+                    "arcade": {
+                        "validator": {
+                            "config": {
+                                "source": "cabinets/turing-teahouse/101-CIFAR",
+                            }
+                        }
+                    }
+                }
+            },
+            "submission_post": {
+                "body": json.dumps(
+                    {
+                        "epochs": 12,
+                        "lr": 0.02,
+                        "weight_decay": 0.001,
+                        "batch_size": 64,
+                        "momentum": 0.8,
+                    }
+                )
+            },
+        }
+        registry_entry = {
+            "source": "cabinets/turing-teahouse/101-CIFAR",
+            "runtime": {
+                "cwd": "cabinets/turing-teahouse/101-CIFAR",
+                "runner": "builtin:101-cifar",
+                "timeout_seconds": 1800,
+                "max_parallel": 2,
+                "batch_window": 10,
+            },
+        }
+
+        completed = subprocess.CompletedProcess(
+            args=["python", "train.py"],
+            returncode=0,
+            stdout="broken stdout\n",
+            stderr="INFO: malformed\n",
+        )
+
+        with mock.patch.object(self.module.shutil, "which", return_value=None), mock.patch.object(
+            self.module.subprocess,
+            "run",
+            return_value=completed,
+        ):
+            body, result = self.module.run_101_cifar(
+                item,
+                repo_root=REPO_ROOT,
+                registry_entry=registry_entry,
+                timeout=321,
+            )
+
+        self.assertIn("评测器运行异常", body)
+        self.assertNotIn("提交格式错误", body)
+        self.assertIn("command:", body)
+        self.assertIn("exit_code: 0", body)
+        self.assertIn("stdout 预览：", body)
+        self.assertIn("stderr 尾部：", body)
+        self.assertIn("broken stdout", body)
+        self.assertIn("INFO: malformed", body)
+        self.assertEqual(result["outcome"], "评测器运行异常，请稍后重试。")
+        self.assertIn("runtime_error_reason", result)
+        self.assertEqual(result["stderr_preview"], "INFO: malformed")
+
     def test_run_102_variable_star_relay_preserves_result_shape(self) -> None:
         item = {
             "topic": {

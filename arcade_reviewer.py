@@ -341,6 +341,43 @@ def truncate_stderr(stderr: str, *, tail_lines: int = 20) -> list[str]:
     return lines[-tail_lines:]
 
 
+def truncate_text_preview(text: str, *, max_chars: int = 4000, tail: bool = False) -> str:
+    normalized = text.strip()
+    if not normalized:
+        return ""
+    if len(normalized) <= max_chars:
+        return normalized
+    if tail:
+        return f"...(truncated to last {max_chars} chars)\n{normalized[-max_chars:]}"
+    return f"{normalized[:max_chars]}\n...(truncated to first {max_chars} chars)"
+
+
+def append_execution_diagnostics(
+    lines: list[str],
+    *,
+    command_executed: str,
+    exit_code: int | None,
+    duration_seconds: float | None,
+    stdout_text: str,
+    stderr_text: str,
+) -> None:
+    if not any([command_executed.strip(), exit_code is not None, duration_seconds is not None, stdout_text.strip(), stderr_text.strip()]):
+        return
+    lines.extend(["", "诊断信息："])
+    if command_executed.strip():
+        lines.extend(["", f"command: {command_executed.strip()}"])
+    if exit_code is not None:
+        lines.append(f"exit_code: {exit_code}")
+    if duration_seconds is not None:
+        lines.append(f"duration_seconds: {duration_seconds}")
+    stdout_preview = truncate_text_preview(stdout_text)
+    if stdout_preview:
+        lines.extend(["", "stdout 预览：", "```text", stdout_preview, "```"])
+    stderr_preview = truncate_text_preview(stderr_text, tail=True)
+    if stderr_preview:
+        lines.extend(["", "stderr 尾部：", "```text", stderr_preview, "```"])
+
+
 def write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = path.with_suffix(path.suffix + ".tmp")
@@ -474,6 +511,7 @@ def update_variable_star_coverage(
 
 
 FORMAT_WRONG_BODY = "提交格式错误，请严格按照题目要求格式重新提交。"
+EVALUATOR_RUNTIME_ERROR_BODY = "评测器运行异常，请稍后重试。"
 ALLOWED_CIFAR_FIELDS = ("epochs", "lr", "weight_decay", "batch_size", "momentum")
 
 
@@ -515,6 +553,14 @@ def format_wrong_evaluation(
                 json.dumps(submission_config, ensure_ascii=False, sort_keys=True),
             ]
         )
+    append_execution_diagnostics(
+        lines,
+        command_executed=command_executed,
+        exit_code=exit_code,
+        duration_seconds=duration_seconds,
+        stdout_text=stdout_text,
+        stderr_text=stderr_text,
+    )
     body = "\n".join(lines)
     result: dict[str, Any] = {
         "passed": False,
@@ -531,6 +577,57 @@ def format_wrong_evaluation(
     }
     if stdout_text:
         result["stdout_preview"] = stdout_text[:4000]
+    if stderr_text:
+        result["stderr_preview"] = truncate_text_preview(stderr_text, tail=True)
+    return body, result
+
+
+def format_evaluator_runtime_error(
+    *,
+    cabinet_source: str,
+    reason: str,
+    submission_config: dict[str, Any],
+    command_executed: str = "",
+    stdout_text: str = "",
+    stderr_text: str = "",
+    exit_code: int | None = None,
+    duration_seconds: float | None = None,
+) -> tuple[str, dict[str, Any]]:
+    lines = [EVALUATOR_RUNTIME_ERROR_BODY, "", f"原因：{reason}"]
+    if submission_config:
+        lines.extend(
+            [
+                "",
+                "采用的提交参数：",
+                json.dumps(submission_config, ensure_ascii=False, sort_keys=True),
+            ]
+        )
+    append_execution_diagnostics(
+        lines,
+        command_executed=command_executed,
+        exit_code=exit_code,
+        duration_seconds=duration_seconds,
+        stdout_text=stdout_text,
+        stderr_text=stderr_text,
+    )
+    body = "\n".join(lines)
+    result: dict[str, Any] = {
+        "passed": False,
+        "score": None,
+        "feedback": body,
+        "outcome": EVALUATOR_RUNTIME_ERROR_BODY,
+        "cabinet": cabinet_source,
+        "runtime_error_reason": reason,
+        "submission_config": submission_config,
+        "command_executed": command_executed.strip() or None,
+        "exit_code": exit_code,
+        "duration_seconds": duration_seconds,
+        "stderr_tail": truncate_stderr(stderr_text),
+    }
+    if stdout_text:
+        result["stdout_preview"] = stdout_text[:4000]
+    if stderr_text:
+        result["stderr_preview"] = truncate_text_preview(stderr_text, tail=True)
     return body, result
 
 
@@ -611,7 +708,7 @@ def run_101_cifar(
     line3 = stdout_lines[2].strip() if len(stdout_lines) >= 3 else ""
     protocol_ok = len(stdout_lines) >= 3 and line3 in ("SUCCESS", "ERROR")
     if not protocol_ok:
-        return format_wrong_evaluation(
+        return format_evaluator_runtime_error(
             cabinet_source=cabinet_source,
             reason="stdout 不符合约定：须为三行（epoch 列表、test 准确率列表、第三行为 SUCCESS 或 ERROR）",
             submission_config=config,
