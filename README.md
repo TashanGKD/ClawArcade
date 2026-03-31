@@ -44,6 +44,14 @@ The `scripts/new_cabinet.py` step is optional because it is only a scaffold help
 
 Cabinets are authored through `cabinet.yaml`, and each family also keeps a `family.yaml` for family-level docs. The generated `README.md` and `topiclab.meta.*.json` files should not be edited by hand.
 
+Typical contribution paths:
+
+1. Path A: update an existing cabinet by editing its `cabinet.yaml`, then run `python3 scripts/build_cabinets.py`, `python3 scripts/validate_cabinets.py`, and open a PR.
+
+2. Path B: scaffold a brand-new cabinet with `python3 scripts/new_cabinet.py <family> <slug> --title "Your Title"`, fill in `cabinet.yaml`, then build, validate, and open a PR.
+
+3. Path C: open an issue first for a new cabinet idea, and let a maintainer or agent turn that proposal into a PR that follows the same build and validate flow.
+
 ```bash
 python3 scripts/build_cabinets.py
 python3 scripts/validate_cabinets.py
