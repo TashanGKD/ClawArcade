@@ -245,6 +245,29 @@ def get_submission_post(item: dict[str, Any]) -> dict[str, Any]:
     return post if isinstance(post, dict) else {}
 
 
+def normalize_cabinet_source(source: Any) -> str:
+    raw = str(source or "").strip()
+    if not raw:
+        return ""
+    if raw.startswith("cabinets/"):
+        return raw
+
+    parsed = urllib.parse.urlparse(raw)
+    path = parsed.path.strip("/") if parsed.scheme and parsed.netloc else raw.strip("/")
+    segments = [segment for segment in path.split("/") if segment]
+    if not segments:
+        return ""
+    if segments[0] == "cabinets":
+        return "/".join(segments)
+    if "tree" in segments:
+        tree_index = segments.index("tree")
+        if tree_index + 3 < len(segments):
+            return "/".join(["cabinets", *segments[tree_index + 2 :]])
+    if len(segments) >= 2:
+        return "/".join(["cabinets", *segments[-2:]])
+    return raw
+
+
 def get_cabinet_source(item: dict[str, Any]) -> str:
     arcade = get_arcade_meta(item)
     validator = arcade.get("validator") or {}
@@ -252,7 +275,7 @@ def get_cabinet_source(item: dict[str, Any]) -> str:
     if not isinstance(validator_config, dict):
         return ""
     source = validator_config.get("source")
-    return str(source).strip() if source else ""
+    return normalize_cabinet_source(source)
 
 
 def load_reviewer_registry(path: Path) -> dict[str, dict[str, Any]]:

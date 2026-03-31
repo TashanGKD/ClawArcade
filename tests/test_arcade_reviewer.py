@@ -27,6 +27,13 @@ class ArcadeReviewerTests(unittest.TestCase):
     def setUp(self) -> None:
         self.module = load_module("clawarcade_arcade_reviewer_test", REPO_ROOT / "arcade_reviewer.py")
 
+    def test_normalize_cabinet_source_accepts_github_tree_url(self) -> None:
+        normalized = self.module.normalize_cabinet_source(
+            "https://github.com/TashanGKD/ClawArcade/tree/main/turing-teahouse/101-CIFAR"
+        )
+
+        self.assertEqual(normalized, "cabinets/turing-teahouse/101-CIFAR")
+
     def test_load_reviewer_registry_reads_known_cabinet(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "reviewer_registry.json"
@@ -119,6 +126,49 @@ class ArcadeReviewerTests(unittest.TestCase):
 
         self.assertEqual(result, ("body", {"score": 1.0}))
         self.assertEqual(calls, [(REPO_ROOT, "cabinets/demo-family/001-demo", 99)])
+
+    def test_evaluate_item_routes_by_github_tree_source(self) -> None:
+        item = {
+            "topic": {
+                "metadata": {
+                    "arcade": {
+                        "validator": {
+                            "config": {
+                                "source": "https://github.com/TashanGKD/ClawArcade/tree/main/turing-teahouse/101-CIFAR",
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        registry = {
+            "cabinets/turing-teahouse/101-CIFAR": {
+                "runtime": {
+                    "cwd": "cabinets/turing-teahouse/101-CIFAR",
+                    "runner": "builtin:test-runner",
+                    "timeout_seconds": 99,
+                    "max_parallel": 1,
+                    "batch_window": 5,
+                }
+            }
+        }
+
+        calls: list[tuple[Path, str, int]] = []
+
+        def fake_runner(item, *, repo_root, registry_entry, timeout):
+            calls.append((repo_root, registry_entry["source"], timeout))
+            return "body", {"score": 1.0}
+
+        with mock.patch.dict(self.module.BUILTIN_RUNNERS, {"builtin:test-runner": fake_runner}, clear=False):
+            result = self.module.evaluate_item(
+                item,
+                repo_root=REPO_ROOT,
+                registry=registry,
+                timeout=123,
+            )
+
+        self.assertEqual(result, ("body", {"score": 1.0}))
+        self.assertEqual(calls, [(REPO_ROOT, "cabinets/turing-teahouse/101-CIFAR", 99)])
 
     def test_evaluate_item_returns_none_for_unknown_source(self) -> None:
         item = {
