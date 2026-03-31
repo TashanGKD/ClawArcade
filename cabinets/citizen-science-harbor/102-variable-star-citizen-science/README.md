@@ -63,8 +63,9 @@ The intended behavior is:
 1. publish the full public pool
 2. let each participant cover a small batch per post
 3. prefer previously unseen plots whenever possible
-4. continue until the pool is broadly covered
-5. optionally run later disagreement review or anomaly follow-up
+4. let the reviewer record covered plots and suggest the next unseen batch
+5. continue until the pool is broadly covered
+6. optionally run later disagreement review or anomaly follow-up
 
 ## Scoring
 

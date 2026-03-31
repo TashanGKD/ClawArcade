@@ -38,6 +38,7 @@ import argparse
 import atexit
 import json
 import os
+import random
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
@@ -64,6 +65,9 @@ _log_lock = threading.Lock()
 _log_dir: Path = Path(__file__).resolve().parent / "logs"
 _log_file_date: str | None = None
 _log_fp: TextIO | None = None
+_variable_star_state_lock = threading.Lock()
+
+VARIABLE_STAR_CABINET_SOURCE = "cabinets/citizen-science-harbor/102-variable-star-citizen-science"
 
 
 def configure_log_dir(log_dir: Path) -> None:
@@ -314,7 +318,156 @@ def truncate_stderr(stderr: str, *, tail_lines: int = 20) -> list[str]:
     return lines[-tail_lines:]
 
 
+def write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = path.with_suffix(path.suffix + ".tmp")
+    tmp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp_path.replace(path)
+
+
+def variable_star_state_path(repo_root: Path) -> Path:
+    return repo_root / "generated" / "reviewer_state" / "102-variable-star-citizen-science.coverage.json"
+
+
+def load_variable_star_state(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {
+            "schema_version": 1,
+            "processed_submission_ids": [],
+            "covered_urls": {},
+        }
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if payload.get("schema_version") != 1:
+        raise ValueError(f"invalid variable-star coverage state: {path}")
+    if not isinstance(payload.get("processed_submission_ids"), list):
+        raise ValueError(f"invalid variable-star processed submissions: {path}")
+    if not isinstance(payload.get("covered_urls"), dict):
+        raise ValueError(f"invalid variable-star covered_urls: {path}")
+    return payload
+
+
+def load_variable_star_manifest_urls(cabinet_dir: Path) -> list[str]:
+    manifest_path = cabinet_dir / "data" / "manifest.json"
+    if not manifest_path.exists():
+        return []
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, list):
+        return []
+    urls: list[str] = []
+    for row in payload:
+        if not isinstance(row, dict):
+            continue
+        image_url = row.get("image_url")
+        if isinstance(image_url, str) and image_url.strip():
+            urls.append(image_url.strip())
+    return urls
+
+
+def update_variable_star_coverage(
+    *,
+    repo_root: Path,
+    cabinet_dir: Path,
+    submission_post_id: str,
+    topic_id: str,
+    rows: list[dict[str, Any]],
+    next_batch_size: int = 5,
+) -> dict[str, Any]:
+    state_path = variable_star_state_path(repo_root)
+    with _variable_star_state_lock:
+        state = load_variable_star_state(state_path)
+        processed_submission_ids = set(str(value) for value in state.get("processed_submission_ids") or [])
+        covered_urls = state.get("covered_urls") or {}
+        if not isinstance(covered_urls, dict):
+            covered_urls = {}
+
+        row_statuses: list[dict[str, Any]] = []
+        is_replay = submission_post_id in processed_submission_ids
+        newly_covered_count = 0
+        for row in rows:
+            image_url = str(row.get("image_url") or "").strip()
+            if not image_url:
+                continue
+            existing = covered_urls.get(image_url)
+            previously_seen = isinstance(existing, dict) and int(existing.get("count") or 0) > 0
+            if not is_replay:
+                count = int(existing.get("count") or 0) + 1 if isinstance(existing, dict) else 1
+                covered_urls[image_url] = {
+                    "count": count,
+                    "first_submission_post_id": (
+                        existing.get("first_submission_post_id")
+                        if isinstance(existing, dict) and existing.get("first_submission_post_id")
+                        else submission_post_id
+                    ),
+                    "first_topic_id": (
+                        existing.get("first_topic_id")
+                        if isinstance(existing, dict) and existing.get("first_topic_id")
+                        else topic_id
+                    ),
+                    "last_submission_post_id": submission_post_id,
+                    "last_topic_id": topic_id,
+                    "last_seen_at": datetime.now(_LOG_TZ).isoformat(),
+                }
+                if not previously_seen:
+                    newly_covered_count += 1
+            row_statuses.append(
+                {
+                    "image_url": image_url,
+                    "is_new_coverage": not previously_seen,
+                    "previously_seen": previously_seen,
+                }
+            )
+
+        if not is_replay:
+            processed_submission_ids.add(submission_post_id)
+            state = {
+                "schema_version": 1,
+                "processed_submission_ids": sorted(processed_submission_ids),
+                "covered_urls": covered_urls,
+            }
+            write_json_atomic(state_path, state)
+
+        all_urls = load_variable_star_manifest_urls(cabinet_dir)
+        unseen_urls = [url for url in all_urls if url not in covered_urls]
+        seed_material = f"{topic_id}:{submission_post_id}"
+        rng = random.Random(seed_material)
+        if len(unseen_urls) <= next_batch_size:
+            next_batch = unseen_urls
+        else:
+            next_batch = rng.sample(unseen_urls, next_batch_size)
+        total_pool = len(all_urls)
+        covered_total = len(covered_urls)
+
+    return {
+        "is_replay": is_replay,
+        "rows": row_statuses,
+        "newly_covered_count": newly_covered_count,
+        "covered_total": covered_total,
+        "total_pool": total_pool,
+        "remaining_unseen": max(total_pool - covered_total, 0),
+        "coverage_ratio": round(covered_total / total_pool, 4) if total_pool else None,
+        "next_batch": next_batch,
+        "state_path": str(state_path),
+    }
+
+
 FORMAT_WRONG_BODY = "提交格式错误，请严格按照题目要求格式重新提交。"
+
+
+def extract_variable_star_image_urls(text: str) -> list[str]:
+    urls: list[str] = []
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        parts = [part.strip() for part in line.replace("｜", "|").split("|")]
+        if not parts:
+            continue
+        first = parts[0]
+        if first.startswith("![](") and first.endswith(")"):
+            url = first[4:-1].strip()
+            if url:
+                urls.append(url)
+    return urls
 
 
 def format_wrong_evaluation(
@@ -465,6 +618,9 @@ def run_102_variable_star_relay(
 ) -> tuple[str, dict[str, Any]]:
     submission = get_submission_post(item)
     post_body = str(submission.get("body") or "").strip()
+    submission_post_id = str(submission.get("id") or "")
+    topic = item.get("topic") or {}
+    topic_id = str(topic.get("id") or "")
     cabinet_source = str(get_cabinet_source(item) or registry_entry.get("source") or "")
     runtime = registry_entry.get("runtime") or {}
     cabinet_dir = repo_root / str(runtime.get("cwd") or "")
@@ -526,18 +682,52 @@ def run_102_variable_star_relay(
         )
 
     rows = payload.get("rows") or []
+    submitted_image_urls = extract_variable_star_image_urls(post_body)
+    if isinstance(rows, list):
+        normalized_rows: list[dict[str, Any]] = []
+        for idx, row in enumerate(rows):
+            if not isinstance(row, dict):
+                continue
+            normalized = dict(row)
+            if not str(normalized.get("image_url") or "").strip() and idx < len(submitted_image_urls):
+                normalized["image_url"] = submitted_image_urls[idx]
+            normalized_rows.append(normalized)
+        rows = normalized_rows
+    coverage = update_variable_star_coverage(
+        repo_root=repo_root,
+        cabinet_dir=cabinet_dir,
+        submission_post_id=submission_post_id,
+        topic_id=topic_id,
+        rows=rows if isinstance(rows, list) else [],
+    )
     summary_lines = [f"总分 {payload.get('raw_points')}/75 ({payload.get('score_100')}/100)"]
-    for row in rows:
+    coverage_rows = coverage.get("rows") if isinstance(coverage.get("rows"), list) else []
+    for idx, row in enumerate(rows):
+        coverage_row = coverage_rows[idx] if idx < len(coverage_rows) else {}
+        coverage_label = "首次覆盖" if coverage_row.get("is_new_coverage") else "重复覆盖"
         summary_lines.append(
             " | ".join(
                 [
                     f"line {row.get('line')}",
                     "类别正确" if row.get("class_correct") else f"类别错(真值:{row.get('true_class')})",
                     "异常正确" if row.get("anomaly_correct") else f"异常错(真值:{'异常' if row.get('true_anomaly') else '正常'})",
+                    coverage_label,
                     f"+{row.get('points')}",
                 ]
             )
         )
+    if coverage.get("is_replay"):
+        summary_lines.append("说明：这条 submission_post 已处理过，覆盖状态未重复累计。")
+    elif coverage.get("total_pool"):
+        summary_lines.append(
+            "覆盖进度 "
+            f"{coverage.get('covered_total')}/{coverage.get('total_pool')} "
+            f"(本帖新增 {coverage.get('newly_covered_count')}/5, 剩余 {coverage.get('remaining_unseen')})"
+        )
+    next_batch = coverage.get("next_batch") if isinstance(coverage.get("next_batch"), list) else []
+    if next_batch:
+        summary_lines.append("下一批建议样本：")
+        summary_lines.extend(f"![]({url})" for url in next_batch)
     body = "\n\n".join(summary_lines)
     result = {
         "passed": completed.returncode == 0,
@@ -547,6 +737,7 @@ def run_102_variable_star_relay(
         "raw_points": payload.get("raw_points"),
         "max_raw_points": payload.get("max_raw_points"),
         "rows": rows,
+        "coverage": coverage,
         "command_executed": " ".join(command),
         "exit_code": completed.returncode,
         "duration_seconds": duration,

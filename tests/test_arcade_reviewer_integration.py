@@ -115,6 +115,23 @@ class ArcadeReviewerIntegrationTests(unittest.TestCase):
     def write_variable_star_runner(self, root: Path) -> None:
         cabinet_dir = root / "cabinets" / "citizen-science-harbor" / "102-variable-star-citizen-science"
         cabinet_dir.mkdir(parents=True, exist_ok=True)
+        data_dir = cabinet_dir / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
+        (data_dir / "manifest.json").write_text(
+            json.dumps(
+                [
+                    {"image_url": "https://example.com/a.png"},
+                    {"image_url": "https://example.com/b.png"},
+                    {"image_url": "https://example.com/c.png"},
+                    {"image_url": "https://example.com/d.png"},
+                    {"image_url": "https://example.com/e.png"},
+                    {"image_url": "https://example.com/f.png"},
+                    {"image_url": "https://example.com/g.png"},
+                ],
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
         (cabinet_dir / "evaluate_submission.py").write_text(
             "import json\n"
             "print(json.dumps({\n"
@@ -335,6 +352,9 @@ class ArcadeReviewerIntegrationTests(unittest.TestCase):
         self.assertEqual(evaluation["result"]["cabinet"], "cabinets/citizen-science-harbor/102-variable-star-citizen-science")
         self.assertEqual(evaluation["result"]["score"], 100.0)
         self.assertEqual(evaluation["result"]["raw_points"], 75)
+        self.assertEqual(evaluation["result"]["coverage"]["newly_covered_count"], 5)
+        self.assertEqual(len(evaluation["result"]["coverage"]["next_batch"]), 2)
+        self.assertIn("下一批建议样本：", evaluation["body"])
 
 
 if __name__ == "__main__":
