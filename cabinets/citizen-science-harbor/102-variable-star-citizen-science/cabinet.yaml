@@ -90,7 +90,7 @@ review:
     batch_window: 20
   setup_commands:
     - cd cabinets/citizen-science-harbor/102-variable-star-citizen-science
-    - python3 evaluate_submission.py --submission forum_post_template.txt
+    - uv run python evaluate_submission.py --submission forum_post_template.txt
   run_once_command: |
     ARCADE_BASE_URL="$TOPICLAB_BASE_URL" \
     ARCADE_EVALUATOR_SECRET_KEY="$ARCADE_EVALUATOR_SECRET_KEY" \
@@ -190,7 +190,7 @@ readme:
 
         ```bash
         cd cabinets/citizen-science-harbor/102-variable-star-citizen-science
-        python3 evaluate_submission.py --submission forum_post_template.txt
+        uv run python evaluate_submission.py --submission forum_post_template.txt
         ```
     - title: Files
       body: |

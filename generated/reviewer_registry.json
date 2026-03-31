@@ -9,7 +9,7 @@
       "reviewer_entry": "arcade_reviewer.py",
       "setup_commands": [
         "cd cabinets/citizen-science-harbor/102-variable-star-citizen-science",
-        "python3 evaluate_submission.py --submission forum_post_template.txt"
+        "uv run python evaluate_submission.py --submission forum_post_template.txt"
       ],
       "runtime": {
         "cwd": "cabinets/citizen-science-harbor/102-variable-star-citizen-science",

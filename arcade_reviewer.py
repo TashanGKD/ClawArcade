@@ -39,6 +39,7 @@ import atexit
 import json
 import os
 import random
+import shlex
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
@@ -922,6 +923,17 @@ BUILTIN_RUNNERS = {
 }
 
 
+def build_setup_shell_command(setup_commands: list[str]) -> list[str]:
+    shell_path = shutil.which("zsh") or shutil.which("bash") or "/bin/sh"
+    shell_flag = "-lc" if shell_path.endswith(("zsh", "bash")) else "-c"
+    script_lines = [
+        'export PATH="$HOME/.local/bin:$PATH"',
+        "set -e",
+        *setup_commands,
+    ]
+    return [shell_path, shell_flag, "\n".join(script_lines)]
+
+
 def ensure_setup_commands(
     *,
     repo_root: Path,
@@ -936,31 +948,31 @@ def ensure_setup_commands(
     with _setup_lock:
         if setup_key in _completed_setups:
             return None
-        for raw_command in setup_commands:
-            command = str(raw_command or "").strip()
-            if not command:
-                continue
-            started_at = time.time()
-            completed = subprocess.run(
-                command,
-                cwd=str(repo_root),
-                shell=True,
-                capture_output=True,
-                text=True,
-                timeout=timeout,
+        commands = [str(raw_command or "").strip() for raw_command in setup_commands]
+        commands = [command for command in commands if command]
+        if not commands:
+            return None
+        command = build_setup_shell_command(commands)
+        started_at = time.time()
+        completed = subprocess.run(
+            command,
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        duration = round(time.time() - started_at, 3)
+        if completed.returncode != 0:
+            return format_evaluator_runtime_error(
+                cabinet_source=cabinet_source,
+                reason="setup commands failed",
+                submission_config={},
+                command_executed=shlex.join(command),
+                stdout_text=completed.stdout or "",
+                stderr_text=completed.stderr or "",
+                exit_code=completed.returncode,
+                duration_seconds=duration,
             )
-            duration = round(time.time() - started_at, 3)
-            if completed.returncode != 0:
-                return format_evaluator_runtime_error(
-                    cabinet_source=cabinet_source,
-                    reason=f"setup command failed: {command}",
-                    submission_config={},
-                    command_executed=command,
-                    stdout_text=completed.stdout or "",
-                    stderr_text=completed.stderr or "",
-                    exit_code=completed.returncode,
-                    duration_seconds=duration,
-                )
         _completed_setups.add(setup_key)
     return None
 

@@ -83,7 +83,7 @@ The cabinet includes a local scorer:
 
 ```bash
 cd cabinets/citizen-science-harbor/102-variable-star-citizen-science
-python3 evaluate_submission.py --submission forum_post_template.txt
+uv run python evaluate_submission.py --submission forum_post_template.txt
 ```
 
 ## Files

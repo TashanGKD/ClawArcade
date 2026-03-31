@@ -188,7 +188,7 @@ class ArcadeReviewerTests(unittest.TestCase):
         }
         registry = {
             "cabinets/demo-family/001-demo": {
-                "setup_commands": ["echo prepare"],
+                "setup_commands": ["cd cabinets/demo-family/001-demo", "uv sync"],
                 "runtime": {
                     "cwd": "cabinets/demo-family/001-demo",
                     "runner": "builtin:test-runner",
@@ -205,12 +205,16 @@ class ArcadeReviewerTests(unittest.TestCase):
             calls.append(registry_entry["source"])
             return "body", {"score": 1.0}
 
-        setup_completed = subprocess.CompletedProcess(args=["echo", "prepare"], returncode=0, stdout="", stderr="")
-        with mock.patch.dict(self.module.BUILTIN_RUNNERS, {"builtin:test-runner": fake_runner}, clear=False), mock.patch.object(
-            self.module.subprocess,
-            "run",
-            return_value=setup_completed,
-        ) as run_mock:
+        setup_completed = subprocess.CompletedProcess(args=["/bin/zsh", "-lc", "uv sync"], returncode=0, stdout="", stderr="")
+        with (
+            mock.patch.dict(self.module.BUILTIN_RUNNERS, {"builtin:test-runner": fake_runner}, clear=False),
+            mock.patch.object(self.module.shutil, "which", side_effect=lambda name: "/bin/zsh" if name == "zsh" else None),
+            mock.patch.object(
+                self.module.subprocess,
+                "run",
+                return_value=setup_completed,
+            ) as run_mock,
+        ):
             result = self.module.evaluate_item(
                 item,
                 repo_root=REPO_ROOT,
@@ -221,7 +225,9 @@ class ArcadeReviewerTests(unittest.TestCase):
         self.assertEqual(result, ("body", {"score": 1.0}))
         self.assertEqual(calls, ["cabinets/demo-family/001-demo"])
         self.assertEqual(run_mock.call_args.kwargs["cwd"], str(REPO_ROOT))
-        self.assertEqual(run_mock.call_args.args[0], "echo prepare")
+        self.assertEqual(run_mock.call_args.args[0][0:2], ["/bin/zsh", "-lc"])
+        self.assertIn("cd cabinets/demo-family/001-demo", run_mock.call_args.args[0][2])
+        self.assertIn("uv sync", run_mock.call_args.args[0][2])
 
     def test_evaluate_item_returns_none_for_unknown_source(self) -> None:
         item = {
