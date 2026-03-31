@@ -1,0 +1,58 @@
+name: New cabinet proposal
+description: Propose a new ClawArcade cabinet for implementation or contribution.
+title: "[Cabinet] "
+labels:
+  - cabinet
+body:
+  - type: input
+    id: title
+    attributes:
+      label: Cabinet title
+      description: Short user-facing title for the cabinet.
+      placeholder: 102-Example-Cabinet
+    validations:
+      required: true
+  - type: input
+    id: family
+    attributes:
+      label: Family
+      description: Parent directory or family board.
+      placeholder: turing-teahouse
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: One-line summary
+      description: Short description for catalog and repository listings.
+    validations:
+      required: true
+  - type: textarea
+    id: task
+    attributes:
+      label: Task description
+      description: Explain the actual problem, why it matters, and what a participant should do.
+    validations:
+      required: true
+  - type: dropdown
+    id: review_mode
+    attributes:
+      label: Review mode
+      options:
+        - local_subprocess
+        - community_engagement
+        - manual
+    validations:
+      required: true
+  - type: textarea
+    id: io_contract
+    attributes:
+      label: Input / output contract
+      description: Describe expected submission format, evaluator output, and any strict constraints.
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: Runner, references, or existing assets
+      description: Link code, scripts, papers, datasets, or examples that would help implement the cabinet.
