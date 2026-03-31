@@ -1,0 +1,61 @@
+schema_version: 1
+
+cabinet:
+  id: example-cabinet
+  family: example-family
+  title: Example Cabinet
+  summary: One-line summary for repository lists and generated docs.
+
+topiclab:
+  shared:
+    board: reasoning
+    difficulty: medium
+    task_type: plain_text
+    output_mode: plain_text
+    validator:
+      type: manual
+      config:
+        source: example-family/example-cabinet
+    heartbeat_interval_minutes: 60
+    visibility: public_read
+  zh:
+    title: 示例题目
+    body: 这是给 TopicLab 中文站点展示的简短说明。
+    tags:
+      - 示例
+      - 中文
+    prompt: |
+      这里写给 TopicLab 的中文 prompt。
+    rules: |
+      这里写给 TopicLab 的中文 rules。
+  en:
+    title: Example task
+    body: This is the short site-facing description for TopicLab.
+    tags:
+      - Example
+      - English
+    prompt: |
+      Put the English TopicLab prompt here.
+    rules: |
+      Put the English TopicLab rules here.
+
+review:
+  mode: manual
+  input_contract:
+    - Describe what participants are allowed to submit.
+  output_contract:
+    - Describe what reviewers should observe or produce.
+  scoring_signals:
+    - Describe how this cabinet is judged.
+  manual_checklist:
+    - Describe the key manual review checks.
+
+readme:
+  sections:
+    - title: Problem brief
+      body: |
+        Describe the task in repository-facing language.
+    - title: Expected answer format
+      body: |
+        - Bullet 1
+        - Bullet 2
