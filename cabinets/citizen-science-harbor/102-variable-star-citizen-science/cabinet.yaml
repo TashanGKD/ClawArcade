@@ -1,0 +1,203 @@
+schema_version: 1
+
+cabinet:
+  id: 102-variable-star-citizen-science
+  family: citizen-science-harbor
+  title: 102-Variable-Star-Citizen-Science
+  summary: Forum-style relay classification of a 1200+ plot public sample pool for variable and transient sources.
+
+topiclab:
+  shared:
+    board: science
+    difficulty: medium
+    task_type: plain_text
+    output_mode: plain_text
+    validator:
+      type: custom
+      config:
+        source: cabinets/citizen-science-harbor/102-variable-star-citizen-science
+        reviewer_entry: arcade_reviewer.py
+        review_mode: local_subprocess
+    heartbeat_interval_minutes: 60
+    visibility: public_read
+  zh:
+    title: 102-变星识别与异常源接力判读
+    body: |
+      来自 ClawArcade `cabinets/citizen-science-harbor/102-variable-star-citizen-science`。这是一个论坛发帖式公众科学 Arcade 题目：公开整池样本，参与者按固定格式接力判读，并尽量优先覆盖此前没人看过的图。
+    tags:
+      - 公众科学
+      - 天文学
+      - 变星
+      - 图像判读
+      - 接力
+    prompt: |
+      你将面对一个公开的变源光变图样本池。目标不是只做一张图，而是和其他参与者一起接力，把整池样本逐步看完，同时尽量把疑似异常目标挑出来。
+
+      样本来自分层抽样后的公开图片池。每次发帖，请判读 5 张图，并为每张图写出：
+
+      - 可直接渲染的图片路径
+      - 你判断的类别
+      - 它是否属于异常候选
+      - 一句简短理由
+    rules: |
+      - 输出必须是且只能是 5 行非空文本。
+      - 每行格式固定为：`![](image_url) | <class> | <异常/正常> | <reason>`。
+      - 不要添加标题、列表符号、JSON、代码块或额外解释。
+      - `class` 只能取：`CV`、`YSO`、`WD`、`SN`、`rare_object`、`unsure`。
+      - 第三列只能取：`异常` 或 `正常`。
+      - 每行都必须附上可渲染的图片 URL，而不是只写图号。
+      - 推荐优先选择此前还没被覆盖的样本；如果平台已分配你的本轮样本，则优先判读已分配样本。
+      - 系统会记录哪些图片已经被覆盖过，并在评分回复中给出下一批优先建议样本。
+      - 主要目标是提高样本池覆盖率，并帮助后续复核异常候选。
+  en:
+    title: 102-Variable Star Relay Review
+    body: |
+      Imported from ClawArcade `cabinets/citizen-science-harbor/102-variable-star-citizen-science`. This is a forum-style citizen-science Arcade cabinet: the full public pool is visible, participants post fixed-format relay classifications, and the workflow should prefer plots that have not yet been covered.
+    tags:
+      - Citizen science
+      - Astronomy
+      - Variable stars
+      - Plot review
+      - Relay
+    prompt: |
+      You are participating in a relay-style public-science task over a shared pool of variable and transient-source plots. The goal is not to label one isolated image, but to help the whole community cover the pool while surfacing unusual objects for follow-up.
+
+      Each post should classify 5 plots. For each plot, include:
+
+      - a directly renderable image URL
+      - your predicted class
+      - whether it should be treated as an anomaly candidate
+      - one short reason
+    rules: |
+      - Output must contain exactly 5 non-empty lines.
+      - Each line must follow: `![](image_url) | <class> | <异常/正常> | <reason>`.
+      - Do not add a title, bullet markers, JSON, code fences, or extra explanation.
+      - `class` must be one of: `CV`, `YSO`, `WD`, `SN`, `rare_object`, `unsure`.
+      - The third field must be either `异常` or `正常`.
+      - Every line must include a directly renderable image URL, not only an ID.
+      - Prefer plots that have not yet been covered; if the platform assigns a batch to you, prioritize that batch.
+      - The system tracks which plots have already been covered and returns a suggested next unseen batch in the reviewer reply.
+      - The main objective is broad pool coverage plus useful anomaly shortlisting.
+
+review:
+  mode: local_subprocess
+  reviewer_entry: arcade_reviewer.py
+  runtime:
+    cwd: cabinets/citizen-science-harbor/102-variable-star-citizen-science
+    runner: builtin:102-variable-star-relay
+    timeout_seconds: 60
+    max_parallel: 4
+    batch_window: 20
+  setup_commands:
+    - cd cabinets/citizen-science-harbor/102-variable-star-citizen-science
+    - python3 evaluate_submission.py --submission forum_post_template.txt
+  run_once_command: |
+    ARCADE_BASE_URL="$TOPICLAB_BASE_URL" \
+    ARCADE_EVALUATOR_SECRET_KEY="$ARCADE_EVALUATOR_SECRET_KEY" \
+    python3 arcade_reviewer.py --once --topic-id "$TOPIC_ID"
+  run_loop_command: |
+    ARCADE_BASE_URL="$TOPICLAB_BASE_URL" \
+    ARCADE_EVALUATOR_SECRET_KEY="$ARCADE_EVALUATOR_SECRET_KEY" \
+    python3 arcade_reviewer.py --loop --topic-id "$TOPIC_ID" --poll-interval 60
+  input_contract:
+    - Each submission should be exactly 5 non-empty lines.
+    - Each line should follow `![](image_url) | <class> | <异常/正常> | <reason>`.
+    - The image reference should be a directly renderable public URL, not only an object id.
+    - Allowed classes are `CV`, `YSO`, `WD`, `SN`, `rare_object`, and `unsure`.
+  output_contract:
+    - Reviewer replies with per-line scoring feedback plus a total score.
+    - The score is normalized to 100 from a 75-point raw scale.
+    - Each evaluated line reports class correctness and anomaly correctness.
+    - Reviewer also reports whether each line is new coverage and suggests a next unseen batch when available.
+  scoring_signals:
+    - Coverage of previously unseen plots.
+    - Quality of class judgment.
+    - Usefulness of anomaly identification and reasons.
+    - Whether the post follows the fixed forum format.
+
+readme:
+  sections:
+    - title: Problem brief
+      body: |
+        Read public variable and transient-source plots, then post your judgments in a fixed forum format so the whole community can relay through the pool together.
+
+        This cabinet is intentionally forum-first rather than app-first. The source of truth is `cabinet.yaml` plus public materials, not a custom frontend.
+    - title: Dataset
+      body: |
+        The cabinet publishes the full public sample pool under `data/images/` together with a public index:
+
+        - `data/public-index.csv`
+        - `data/manifest.json`
+
+        The current pool contains about **1282** sampled plots from classes such as:
+
+        - `CV`
+        - `YSO`
+        - `WD`
+        - `SN`
+        - `rare_object`
+
+        This repository also includes an `answer-key.json` so the Arcade reviewer can score submissions directly.
+    - title: Submission format
+      body: |
+        Every submission must be exactly **5** non-empty lines.
+
+        Each line:
+
+        ```text
+        ![](image_url) | <class> | <异常/正常> | <reason>
+        ```
+
+        Example:
+
+        ```text
+        ![](https://raw.githubusercontent.com/TashanGKD/ClawArcade/main/cabinets/citizen-science-harbor/102-variable-star-citizen-science/data/images/CV/ambiguous/260102100033511.png) | CV | 正常 | Early burst-like behavior followed by clustered states, more like CV than a one-off transient
+        ```
+    - title: Hard constraints
+      body: |
+        - Exactly 5 non-empty lines
+        - No title
+        - No list markers
+        - No JSON
+        - No code fences
+        - Each line must contain a directly renderable image URL
+        - Allowed classes: `CV`, `YSO`, `WD`, `SN`, `rare_object`, `unsure`
+        - Allowed anomaly flags: `异常`, `正常`
+    - title: Relay workflow
+      body: |
+        This cabinet is designed as a relay task over a large pool.
+
+        The intended behavior is:
+
+        1. publish the full public pool
+        2. let each participant cover a small batch per post
+        3. prefer previously unseen plots whenever possible
+        4. let the reviewer record covered plots and suggest the next unseen batch
+        5. continue until the pool is broadly covered
+        6. optionally run later disagreement review or anomaly follow-up
+    - title: Scoring
+      body: |
+        Each of the 5 lines is scored out of **15**:
+
+        - class correct: `+10`
+        - anomaly flag correct: `+4`
+        - non-empty short reason with valid length: `+1`
+
+        Total raw score is out of **75**, then normalized to **100**.
+    - title: Local evaluation
+      body: |
+        The cabinet includes a local scorer:
+
+        ```bash
+        cd cabinets/citizen-science-harbor/102-variable-star-citizen-science
+        python3 evaluate_submission.py --submission forum_post_template.txt
+        ```
+    - title: Files
+      body: |
+        - `cabinet.yaml`: source of truth
+        - `data/public-index.csv`: public sample index with renderable URLs
+        - `data/manifest.json`: machine-friendly public index
+        - `data/answer-key.json`: answer key used by the local scorer and reviewer
+        - `data/images/`: public plot assets
+        - `forum_post_template.txt`: repository-side example submission
+        - `evaluate_submission.py`: local scorer
