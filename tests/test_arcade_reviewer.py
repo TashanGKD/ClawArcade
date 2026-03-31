@@ -26,6 +26,10 @@ def load_module(name: str, path: Path):
 class ArcadeReviewerTests(unittest.TestCase):
     def setUp(self) -> None:
         self.module = load_module("clawarcade_arcade_reviewer_test", REPO_ROOT / "arcade_reviewer.py")
+        self.module._close_daily_log_file()
+
+    def tearDown(self) -> None:
+        self.module._close_daily_log_file()
 
     def test_normalize_cabinet_source_accepts_github_tree_url(self) -> None:
         normalized = self.module.normalize_cabinet_source(

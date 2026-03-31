@@ -129,6 +129,49 @@ def log(message: str) -> None:
     print(line, flush=True)
 
 
+def log_preview(value: Any, *, max_chars: int = 240) -> str:
+    text = " ".join(str(value or "").split())
+    if not text:
+        return "-"
+    if len(text) <= max_chars:
+        return text
+    return f"{text[:max_chars]}..."
+
+
+def format_item_log_context(item: dict[str, Any]) -> str:
+    topic = item.get("topic") or {}
+    submission = get_submission_post(item)
+    title = log_preview(topic.get("title") or "<untitled>", max_chars=120)
+    topic_id = str(topic.get("id") or "-")
+    submission_post_id = str(submission.get("id") or "-")
+    source = get_cabinet_source(item) or "<unknown-source>"
+    return (
+        f"topic={title} topic_id={topic_id} submission={submission_post_id} source={source}"
+    )
+
+
+def format_result_log_summary(result: dict[str, Any]) -> str:
+    parts = [
+        f"passed={result.get('passed')!r}",
+        f"score={result.get('score')!r}",
+        f"duration={result.get('duration_seconds')!r}",
+        f"exit_code={result.get('exit_code')!r}",
+    ]
+    runtime_reason = result.get("runtime_error_reason")
+    if runtime_reason:
+        parts.append(f"runtime_error={log_preview(runtime_reason, max_chars=200)}")
+    format_reason = result.get("format_error_reason")
+    if format_reason:
+        parts.append(f"format_error={log_preview(format_reason, max_chars=200)}")
+    command = result.get("command_executed")
+    if command:
+        parts.append(f"command={log_preview(command, max_chars=200)}")
+    stderr_tail = result.get("stderr_tail") or []
+    if isinstance(stderr_tail, list) and stderr_tail:
+        parts.append(f"stderr_tail={log_preview(stderr_tail[-1], max_chars=200)}")
+    return " ".join(parts)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run ClawArcade tasks and post TopicLab evaluator replies.")
     parser.add_argument("--base-url", default=os.getenv("ARCADE_BASE_URL", DEFAULT_BASE_URL), help="TopicLab backend base URL")
@@ -947,12 +990,14 @@ def ensure_setup_commands(
     setup_key = (repo_root.resolve(), cabinet_source)
     with _setup_lock:
         if setup_key in _completed_setups:
+            log(f"setup skipped: source={cabinet_source} status=already-complete")
             return None
         commands = [str(raw_command or "").strip() for raw_command in setup_commands]
         commands = [command for command in commands if command]
         if not commands:
             return None
         command = build_setup_shell_command(commands)
+        log(f"setup started: source={cabinet_source} command={log_preview(shlex.join(command), max_chars=240)}")
         started_at = time.time()
         completed = subprocess.run(
             command,
@@ -963,6 +1008,14 @@ def ensure_setup_commands(
         )
         duration = round(time.time() - started_at, 3)
         if completed.returncode != 0:
+            stderr_tail = truncate_stderr(completed.stderr)
+            stderr_summary = stderr_tail[-1] if stderr_tail else ""
+            log(
+                "setup failed: "
+                f"source={cabinet_source} exit_code={completed.returncode} duration={duration} "
+                f"command={log_preview(shlex.join(command), max_chars=200)} "
+                f"stderr_tail={log_preview(stderr_summary, max_chars=200)}"
+            )
             return format_evaluator_runtime_error(
                 cabinet_source=cabinet_source,
                 reason="setup commands failed",
@@ -973,6 +1026,7 @@ def ensure_setup_commands(
                 exit_code=completed.returncode,
                 duration_seconds=duration,
             )
+        log(f"setup completed: source={cabinet_source} duration={duration}")
         _completed_setups.add(setup_key)
     return None
 
@@ -1001,6 +1055,10 @@ def evaluate_item(
     effective_timeout = int(runtime.get("timeout_seconds") or timeout)
     runner_entry = dict(registry_entry)
     runner_entry["source"] = source
+    log(
+        "dispatch runner: "
+        f"{format_item_log_context(item)} runner={runner_name} timeout={effective_timeout}"
+    )
     setup_error = ensure_setup_commands(
         repo_root=repo_root,
         registry_entry=runner_entry,
@@ -1030,20 +1088,22 @@ def process_item(
     title = str(topic.get("title") or "<untitled>")
     source = get_cabinet_source(item) or "<unknown-source>"
     if not topic_id or not branch_root_post_id or not submission_post_id:
-        log(f"skip malformed queue item for topic={title}")
+        log(f"skip malformed queue item: {format_item_log_context(item)}")
         return False
 
+    log(f"start evaluation: {format_item_log_context(item)}")
     evaluation = evaluate_item(item, repo_root=repo_root, registry=registry, timeout=timeout)
     if evaluation is None:
-        log(f"skip unsupported task: title={title} source={source}")
+        log(f"skip unsupported task: {format_item_log_context(item)}")
         return False
 
     body, result = evaluation
-    log(f"evaluated topic={title} submission={submission_post_id} score={result.get('score')!r}")
+    log(f"evaluation completed: {format_item_log_context(item)} {format_result_log_summary(result)}")
     if dry_run:
-        log(f"dry-run: would post evaluation for topic={title}")
+        log(f"dry-run: would post evaluation: {format_item_log_context(item)}")
         return True
 
+    log(f"posting evaluation: {format_item_log_context(item)} score={result.get('score')!r} passed={result.get('passed')!r}")
     post_evaluation(
         base_url=base_url,
         secret_key=secret_key,
@@ -1053,7 +1113,7 @@ def process_item(
         body=body,
         result=result,
     )
-    log(f"posted evaluation for topic={title} submission={submission_post_id}")
+    log(f"posted evaluation: {format_item_log_context(item)} score={result.get('score')!r} passed={result.get('passed')!r}")
     return True
 
 
@@ -1078,7 +1138,7 @@ def process_item_safe(
             dry_run=dry_run,
         )
     except Exception as exc:  # noqa: BLE001
-        log(f"evaluation failed: {exc}")
+        log(f"evaluation failed: {format_item_log_context(item)} error={log_preview(exc, max_chars=240)}")
         return False
 
 
@@ -1091,6 +1151,7 @@ def run_once(args: argparse.Namespace, *, registry: dict[str, dict[str, Any]]) -
         topic_id=args.topic_id,
         limit=args.limit,
     )
+    log(f"fetched queue: items={len(items)} topic_id={args.topic_id or '-'} limit={args.limit}")
     if not items:
         log("queue is empty")
         return 0
