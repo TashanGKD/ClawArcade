@@ -214,6 +214,7 @@ class ArcadeReviewerTests(unittest.TestCase):
                         "weight_decay": 0.0,
                         "batch_size": 128,
                         "momentum": 0.9,
+                        "notes": "ignore me",
                     }
                 )
             },
@@ -248,10 +249,79 @@ class ArcadeReviewerTests(unittest.TestCase):
                 timeout=321,
             )
 
-        self.assertEqual(body, "1,10\n\n0.1111,0.2222\n\nSUCCESS")
+        self.assertIn('"batch_size": 128', body)
+        self.assertIn("已忽略额外字段：notes", body)
+        self.assertIn("训练输出：", body)
+        self.assertIn("1,10", body)
+        self.assertIn("0.1111,0.2222", body)
+        self.assertIn("SUCCESS", body)
         self.assertEqual(result["cabinet"], "cabinets/turing-teahouse/101-CIFAR")
         self.assertEqual(result["score"], 0.2222)
         self.assertEqual(result["status_line"], "SUCCESS")
+        self.assertEqual(result["effective_submission_config"]["epochs"], 10)
+        self.assertEqual(result["ignored_fields"], ["notes"])
+
+    def test_run_101_cifar_ignores_extra_fields_in_command(self) -> None:
+        item = {
+            "topic": {
+                "metadata": {
+                    "arcade": {
+                        "validator": {
+                            "config": {
+                                "source": "cabinets/turing-teahouse/101-CIFAR",
+                            }
+                        }
+                    }
+                }
+            },
+            "submission_post": {
+                "body": json.dumps(
+                    {
+                        "epochs": 12,
+                        "lr": 0.02,
+                        "weight_decay": 0.001,
+                        "batch_size": 64,
+                        "momentum": 0.8,
+                        "command": "python train.py ...",
+                        "notes": "extra",
+                    }
+                )
+            },
+        }
+        registry_entry = {
+            "source": "cabinets/turing-teahouse/101-CIFAR",
+            "runtime": {
+                "cwd": "cabinets/turing-teahouse/101-CIFAR",
+                "runner": "builtin:101-cifar",
+                "timeout_seconds": 1800,
+                "max_parallel": 2,
+                "batch_window": 10,
+            },
+        }
+
+        completed = subprocess.CompletedProcess(
+            args=["python", "train.py"],
+            returncode=0,
+            stdout="1,12\n0.1000,0.2000\nSUCCESS\n",
+            stderr="INFO: ok\n",
+        )
+
+        with mock.patch.object(self.module.shutil, "which", return_value=None), mock.patch.object(
+            self.module.subprocess,
+            "run",
+            return_value=completed,
+        ) as run_mock:
+            _, result = self.module.run_101_cifar(
+                item,
+                repo_root=REPO_ROOT,
+                registry_entry=registry_entry,
+                timeout=321,
+            )
+
+        command = run_mock.call_args.args[0]
+        self.assertNotIn("command", " ".join(command))
+        self.assertNotIn("notes", " ".join(command))
+        self.assertEqual(result["ignored_fields"], ["command", "notes"])
 
     def test_run_102_variable_star_relay_preserves_result_shape(self) -> None:
         item = {

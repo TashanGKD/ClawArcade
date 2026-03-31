@@ -474,6 +474,7 @@ def update_variable_star_coverage(
 
 
 FORMAT_WRONG_BODY = "提交格式错误，请严格按照题目要求格式重新提交。"
+ALLOWED_CIFAR_FIELDS = ("epochs", "lr", "weight_decay", "batch_size", "momentum")
 
 
 def extract_variable_star_image_urls(text: str) -> list[str]:
@@ -505,7 +506,16 @@ def format_wrong_evaluation(
     duration_seconds: float | None = None,
 ) -> tuple[str, dict[str, Any]]:
     """Evaluation payload when submission or stdout does not match the cabinet contract; still posted to Arcade."""
-    body = FORMAT_WRONG_BODY
+    lines = [FORMAT_WRONG_BODY, "", f"原因：{reason}"]
+    if submission_config:
+        lines.extend(
+            [
+                "",
+                "收到的 JSON：",
+                json.dumps(submission_config, ensure_ascii=False, sort_keys=True),
+            ]
+        )
+    body = "\n".join(lines)
     result: dict[str, Any] = {
         "passed": False,
         "score": None,
@@ -522,6 +532,12 @@ def format_wrong_evaluation(
     if stdout_text:
         result["stdout_preview"] = stdout_text[:4000]
     return body, result
+
+
+def extract_cifar_submission_details(config: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    sanitized = {key: config[key] for key in ALLOWED_CIFAR_FIELDS if key in config}
+    ignored_fields = sorted(str(key) for key in config.keys() if key not in ALLOWED_CIFAR_FIELDS)
+    return sanitized, ignored_fields
 
 
 def build_cifar_command(config: dict[str, Any]) -> list[str]:
@@ -562,7 +578,8 @@ def run_101_cifar(
     registry_entry: dict[str, Any],
     timeout: int,
 ) -> tuple[str, dict[str, Any]]:
-    config = parse_submission_config(item)
+    raw_config = parse_submission_config(item)
+    config, ignored_fields = extract_cifar_submission_details(raw_config)
     cabinet_source = str(get_cabinet_source(item) or registry_entry.get("source") or "")
     runtime = registry_entry.get("runtime") or {}
     cabinet_dir = repo_root / str(runtime.get("cwd") or "")
@@ -575,7 +592,7 @@ def run_101_cifar(
         return format_wrong_evaluation(
             cabinet_source=cabinet_source,
             reason=str(exc),
-            submission_config=config,
+            submission_config=raw_config,
         )
 
     start = time.time()
@@ -610,10 +627,24 @@ def run_101_cifar(
     success = line3 == "SUCCESS" and completed.returncode == 0
     final_score = accuracies[-1] if accuracies else None
 
-    # Post body: same three logical lines as train.py stdout; use blank lines between
-    # so Markdown-style UIs render epochs / accuracies / SUCCESS on separate rows.
     l0, l1, l2 = (stdout_lines[i].strip() for i in range(3))
-    body = f"{l0}\n\n{l1}\n\n{l2}"
+    body_lines = [
+        f"采用参数：{json.dumps(config, ensure_ascii=False, sort_keys=True)}",
+    ]
+    if ignored_fields:
+        body_lines.append(f"已忽略额外字段：{', '.join(ignored_fields)}")
+    body_lines.extend(
+        [
+            "",
+            "训练输出：",
+            l0,
+            "",
+            l1,
+            "",
+            l2,
+        ]
+    )
+    body = "\n".join(body_lines)
 
     result = {
         "passed": success,
@@ -621,7 +652,9 @@ def run_101_cifar(
         "feedback": body,
         "cabinet": cabinet_source,
         "command_executed": " ".join(command),
-        "submission_config": config,
+        "submission_config": raw_config,
+        "effective_submission_config": config,
+        "ignored_fields": ignored_fields,
         "eval_epochs": eval_epochs,
         "accuracies": accuracies,
         "status_line": line3,
