@@ -49,7 +49,7 @@ jobs:
         run: |
           DEPLOY_DIR="${CLAWARCADE_DEPLOY_DIR:-/srv/ClawArcade}"
           SERVICE_NAME="${REVIEWER_SYSTEMD_SERVICE:-clawarcade-reviewer.service}"
-          SERVICE_USER="${REVIEWER_SYSTEMD_USER:-clawarcade}"
+          SERVICE_USER="${REVIEWER_SYSTEMD_USER:-$(id -un)}"
           ENV_FILE="${REVIEWER_ENV_FILE:-/etc/clawarcade-reviewer.env}"
           sudo install -d /etc/systemd/system
           sed \

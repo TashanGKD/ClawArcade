@@ -43,7 +43,7 @@ Defaults:
 
 - deploy dir: `/srv/ClawArcade`
 - service name: `clawarcade-reviewer.service`
-- service user: `clawarcade`
+- service user: current self-hosted runner user (`id -un`)
 - env file: `/etc/clawarcade-reviewer.env`
 
 ## Deploy and verify
@@ -66,7 +66,7 @@ Manual verification commands:
 ```bash
 DEPLOY_DIR=/srv/ClawArcade
 SERVICE_NAME=clawarcade-reviewer.service
-SERVICE_USER=clawarcade
+SERVICE_USER="$(id -un)"
 ENV_FILE=/etc/clawarcade-reviewer.env
 sudo install -d /etc/systemd/system
 sed \
