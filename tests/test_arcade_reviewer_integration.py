@@ -112,6 +112,27 @@ class ArcadeReviewerIntegrationTests(unittest.TestCase):
             encoding="utf-8",
         )
 
+    def write_variable_star_runner(self, root: Path) -> None:
+        cabinet_dir = root / "cabinets" / "citizen-science-harbor" / "102-variable-star-citizen-science"
+        cabinet_dir.mkdir(parents=True, exist_ok=True)
+        (cabinet_dir / "evaluate_submission.py").write_text(
+            "import json\n"
+            "print(json.dumps({\n"
+            "  'raw_points': 75,\n"
+            "  'score_100': 100.0,\n"
+            "  'max_raw_points': 75,\n"
+            "  'rows': [\n"
+            "    {'line': 1, 'class_correct': True, 'anomaly_correct': True, 'true_class': 'CV', 'true_anomaly': False, 'points': 15},\n"
+            "    {'line': 2, 'class_correct': True, 'anomaly_correct': True, 'true_class': 'YSO', 'true_anomaly': False, 'points': 15},\n"
+            "    {'line': 3, 'class_correct': True, 'anomaly_correct': True, 'true_class': 'SN', 'true_anomaly': True, 'points': 15},\n"
+            "    {'line': 4, 'class_correct': True, 'anomaly_correct': True, 'true_class': 'WD', 'true_anomaly': False, 'points': 15},\n"
+            "    {'line': 5, 'class_correct': True, 'anomaly_correct': True, 'true_class': 'rare_object', 'true_anomaly': True, 'points': 15}\n"
+            "  ]\n"
+            "}, ensure_ascii=False))\n"
+            "print('SUCCESS')\n",
+            encoding="utf-8",
+        )
+
     def run_reviewer_once(self, *, repo_root: Path, registry_path: Path, base_url: str, secret_key: str) -> subprocess.CompletedProcess[str]:
         env = os.environ.copy()
         env["PATH"] = "/usr/bin:/bin"
@@ -244,6 +265,76 @@ class ArcadeReviewerIntegrationTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 0, msg=completed.stderr or completed.stdout)
         self.assertEqual(server.evaluations, [])
         self.assertIn("skip unsupported task", completed.stdout)
+
+    def test_reviewer_once_processes_variable_star_relay(self) -> None:
+        secret = "test-secret"
+        queue_item = {
+            "topic": {
+                "id": "topic-3",
+                "title": "102-Variable Star Relay Review",
+                "metadata": {
+                    "arcade": {
+                        "validator": {
+                            "config": {
+                                "source": "cabinets/citizen-science-harbor/102-variable-star-citizen-science",
+                            }
+                        }
+                    }
+                },
+            },
+            "branch_root_post_id": "branch-root-3",
+            "submission_post": {
+                "id": "submission-3",
+                "body": "\n".join(
+                    [
+                        "![](https://example.com/a.png) | CV | 正常 | reasonable short reason",
+                        "![](https://example.com/b.png) | YSO | 正常 | another acceptable reason",
+                        "![](https://example.com/c.png) | SN | 异常 | transient-like one-off evolution",
+                        "![](https://example.com/d.png) | WD | 正常 | compact and cleaner structure",
+                        "![](https://example.com/e.png) | rare_object | 异常 | highly unusual morphology overall",
+                    ]
+                ),
+            },
+        }
+        server, base_url = self.start_server(queue_items=[queue_item], expected_secret=secret)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write_variable_star_runner(root)
+            registry_path = self.write_registry(
+                root,
+                {
+                    "cabinets/citizen-science-harbor/102-variable-star-citizen-science": {
+                        "cabinet_id": "102-variable-star-citizen-science",
+                        "cabinet_title": "102-Variable-Star-Citizen-Science",
+                        "family": "citizen-science-harbor",
+                        "review_mode": "local_subprocess",
+                        "reviewer_entry": "arcade_reviewer.py",
+                        "runtime": {
+                            "cwd": "cabinets/citizen-science-harbor/102-variable-star-citizen-science",
+                            "runner": "builtin:102-variable-star-relay",
+                            "timeout_seconds": 60,
+                            "max_parallel": 4,
+                            "batch_window": 20,
+                        },
+                    }
+                },
+            )
+
+            completed = self.run_reviewer_once(
+                repo_root=root,
+                registry_path=registry_path,
+                base_url=base_url,
+                secret_key=secret,
+            )
+
+        self.assertEqual(completed.returncode, 0, msg=completed.stderr or completed.stdout)
+        self.assertEqual(len(server.evaluations), 1)
+        evaluation = server.evaluations[0]["payload"]
+        self.assertEqual(evaluation["for_post_id"], "submission-3")
+        self.assertEqual(evaluation["result"]["cabinet"], "cabinets/citizen-science-harbor/102-variable-star-citizen-science")
+        self.assertEqual(evaluation["result"]["score"], 100.0)
+        self.assertEqual(evaluation["result"]["raw_points"], 75)
 
 
 if __name__ == "__main__":

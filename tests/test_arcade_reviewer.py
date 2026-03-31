@@ -203,6 +203,82 @@ class ArcadeReviewerTests(unittest.TestCase):
         self.assertEqual(result["score"], 0.2222)
         self.assertEqual(result["status_line"], "SUCCESS")
 
+    def test_run_102_variable_star_relay_preserves_result_shape(self) -> None:
+        item = {
+            "topic": {
+                "metadata": {
+                    "arcade": {
+                        "validator": {
+                            "config": {
+                                "source": "cabinets/citizen-science-harbor/102-variable-star-citizen-science",
+                            }
+                        }
+                    }
+                }
+            },
+            "submission_post": {
+                "body": "\n".join(
+                    [
+                        "![](https://example.com/a.png) | CV | 正常 | reasonable short reason",
+                        "![](https://example.com/b.png) | YSO | 正常 | another acceptable reason",
+                        "![](https://example.com/c.png) | SN | 异常 | transient-like one-off evolution",
+                        "![](https://example.com/d.png) | WD | 正常 | compact and cleaner structure",
+                        "![](https://example.com/e.png) | rare_object | 异常 | highly unusual morphology overall",
+                    ]
+                )
+            },
+        }
+        registry_entry = {
+            "source": "cabinets/citizen-science-harbor/102-variable-star-citizen-science",
+            "runtime": {
+                "cwd": "cabinets/citizen-science-harbor/102-variable-star-citizen-science",
+                "runner": "builtin:102-variable-star-relay",
+                "timeout_seconds": 60,
+                "max_parallel": 4,
+                "batch_window": 20,
+            },
+        }
+
+        evaluator_stdout = json.dumps(
+            {
+                "raw_points": 71,
+                "score_100": 94.67,
+                "max_raw_points": 75,
+                "rows": [
+                    {"line": 1, "class_correct": True, "anomaly_correct": True, "true_class": "CV", "true_anomaly": False, "points": 15},
+                    {"line": 2, "class_correct": False, "anomaly_correct": True, "true_class": "CV", "true_anomaly": False, "points": 5},
+                    {"line": 3, "class_correct": True, "anomaly_correct": True, "true_class": "SN", "true_anomaly": True, "points": 15},
+                    {"line": 4, "class_correct": True, "anomaly_correct": True, "true_class": "WD", "true_anomaly": False, "points": 15},
+                    {"line": 5, "class_correct": True, "anomaly_correct": True, "true_class": "rare_object", "true_anomaly": True, "points": 15},
+                ],
+            },
+            ensure_ascii=False,
+        ) + "\nSUCCESS\n"
+
+        completed = subprocess.CompletedProcess(
+            args=["python", "evaluate_submission.py"],
+            returncode=0,
+            stdout=evaluator_stdout,
+            stderr="",
+        )
+
+        with mock.patch.object(
+            self.module.subprocess,
+            "run",
+            return_value=completed,
+        ):
+            body, result = self.module.run_102_variable_star_relay(
+                item,
+                repo_root=REPO_ROOT,
+                registry_entry=registry_entry,
+                timeout=60,
+            )
+
+        self.assertIn("总分 71/75 (94.67/100)", body)
+        self.assertEqual(result["cabinet"], "cabinets/citizen-science-harbor/102-variable-star-citizen-science")
+        self.assertEqual(result["score"], 94.67)
+        self.assertEqual(result["raw_points"], 71)
+
 
 if __name__ == "__main__":
     unittest.main()

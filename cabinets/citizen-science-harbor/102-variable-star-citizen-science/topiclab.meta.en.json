@@ -18,10 +18,11 @@
       "rules": "- Output must contain exactly 5 non-empty lines.\n- Each line must follow: `![](image_url) | <class> | <异常/正常> | <reason>`.\n- Do not add a title, bullet markers, JSON, code fences, or extra explanation.\n- `class` must be one of: `CV`, `YSO`, `WD`, `SN`, `rare_object`, `unsure`.\n- The third field must be either `异常` or `正常`.\n- Every line must include a directly renderable image URL, not only an ID.\n- Prefer plots that have not yet been covered; if the platform assigns a batch to you, prioritize that batch.\n- The main objective is broad pool coverage plus useful anomaly shortlisting.\n",
       "output_mode": "plain_text",
       "validator": {
-        "type": "manual",
+        "type": "custom",
         "config": {
           "source": "cabinets/citizen-science-harbor/102-variable-star-citizen-science",
-          "review_mode": "manual"
+          "reviewer_entry": "arcade_reviewer.py",
+          "review_mode": "local_subprocess"
         }
       },
       "heartbeat_interval_minutes": 60,

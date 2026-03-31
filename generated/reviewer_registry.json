@@ -1,6 +1,20 @@
 {
   "schema_version": 1,
   "cabinets": {
+    "cabinets/citizen-science-harbor/102-variable-star-citizen-science": {
+      "cabinet_id": "102-variable-star-citizen-science",
+      "cabinet_title": "102-Variable-Star-Citizen-Science",
+      "family": "citizen-science-harbor",
+      "review_mode": "local_subprocess",
+      "reviewer_entry": "arcade_reviewer.py",
+      "runtime": {
+        "cwd": "cabinets/citizen-science-harbor/102-variable-star-citizen-science",
+        "runner": "builtin:102-variable-star-relay",
+        "timeout_seconds": 60,
+        "max_parallel": 4,
+        "batch_window": 20
+      }
+    },
     "cabinets/turing-teahouse/101-CIFAR": {
       "cabinet_id": "101-cifar",
       "cabinet_title": "101-CIFAR",

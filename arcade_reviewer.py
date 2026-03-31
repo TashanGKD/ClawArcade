@@ -12,6 +12,7 @@ Current behavior:
 
 The first built-in runtime supports:
 - `cabinets/turing-teahouse/101-CIFAR`
+- `cabinets/citizen-science-harbor/102-variable-star-citizen-science`
 
 Environment variables:
 - `ARCADE_BASE_URL` default: `http://127.0.0.1:8001`
@@ -455,8 +456,108 @@ def run_101_cifar(
     return body, result
 
 
+def run_102_variable_star_relay(
+    item: dict[str, Any],
+    *,
+    repo_root: Path,
+    registry_entry: dict[str, Any],
+    timeout: int,
+) -> tuple[str, dict[str, Any]]:
+    submission = get_submission_post(item)
+    post_body = str(submission.get("body") or "").strip()
+    cabinet_source = str(get_cabinet_source(item) or registry_entry.get("source") or "")
+    runtime = registry_entry.get("runtime") or {}
+    cabinet_dir = repo_root / str(runtime.get("cwd") or "")
+    if not cabinet_dir.exists():
+        raise FileNotFoundError(f"cabinet directory not found: {cabinet_dir}")
+    if not post_body:
+        return format_wrong_evaluation(
+            cabinet_source=cabinet_source,
+            reason="帖子正文不能为空。",
+            submission_config={},
+        )
+
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        submission_path = Path(tmp) / "submission.txt"
+        submission_path.write_text(post_body + "\n", encoding="utf-8")
+        command = [
+            sys.executable,
+            "evaluate_submission.py",
+            "--submission",
+            str(submission_path),
+        ]
+        start = time.time()
+        completed = subprocess.run(
+            command,
+            cwd=str(cabinet_dir),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        duration = round(time.time() - start, 3)
+
+    stdout_lines = [line for line in completed.stdout.splitlines() if line.strip()]
+    if len(stdout_lines) < 2 or stdout_lines[-1].strip() != "SUCCESS":
+        return format_wrong_evaluation(
+            cabinet_source=cabinet_source,
+            reason="local evaluator stdout 不符合约定：应输出 JSON 结果并以 SUCCESS 结尾。",
+            submission_config={},
+            command_executed=" ".join(command),
+            stdout_text=completed.stdout or "",
+            stderr_text=completed.stderr or "",
+            exit_code=completed.returncode,
+            duration_seconds=duration,
+        )
+
+    try:
+        payload = json.loads("\n".join(stdout_lines[:-1]))
+    except json.JSONDecodeError as exc:
+        return format_wrong_evaluation(
+            cabinet_source=cabinet_source,
+            reason=f"local evaluator JSON 解析失败: {exc}",
+            submission_config={},
+            command_executed=" ".join(command),
+            stdout_text=completed.stdout or "",
+            stderr_text=completed.stderr or "",
+            exit_code=completed.returncode,
+            duration_seconds=duration,
+        )
+
+    rows = payload.get("rows") or []
+    summary_lines = [f"总分 {payload.get('raw_points')}/75 ({payload.get('score_100')}/100)"]
+    for row in rows:
+        summary_lines.append(
+            " | ".join(
+                [
+                    f"line {row.get('line')}",
+                    "类别正确" if row.get("class_correct") else f"类别错(真值:{row.get('true_class')})",
+                    "异常正确" if row.get("anomaly_correct") else f"异常错(真值:{'异常' if row.get('true_anomaly') else '正常'})",
+                    f"+{row.get('points')}",
+                ]
+            )
+        )
+    body = "\n\n".join(summary_lines)
+    result = {
+        "passed": completed.returncode == 0,
+        "score": payload.get("score_100"),
+        "feedback": body,
+        "cabinet": cabinet_source,
+        "raw_points": payload.get("raw_points"),
+        "max_raw_points": payload.get("max_raw_points"),
+        "rows": rows,
+        "command_executed": " ".join(command),
+        "exit_code": completed.returncode,
+        "duration_seconds": duration,
+        "stderr_tail": truncate_stderr(completed.stderr),
+    }
+    return body, result
+
+
 BUILTIN_RUNNERS = {
     "builtin:101-cifar": run_101_cifar,
+    "builtin:102-variable-star-relay": run_102_variable_star_relay,
 }
 
 

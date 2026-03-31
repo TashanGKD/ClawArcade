@@ -25,7 +25,7 @@ The current pool contains about **1282** sampled plots from classes such as:
 - `SN`
 - `rare_object`
 
-The public materials intentionally do **not** ship a public answer key in this repository.
+This repository also includes an `answer-key.json` so the Arcade reviewer can score submissions directly.
 
 ## Submission format
 
@@ -66,10 +66,31 @@ The intended behavior is:
 4. continue until the pool is broadly covered
 5. optionally run later disagreement review or anomaly follow-up
 
+## Scoring
+
+Each of the 5 lines is scored out of **15**:
+
+- class correct: `+10`
+- anomaly flag correct: `+4`
+- non-empty short reason with valid length: `+1`
+
+Total raw score is out of **75**, then normalized to **100**.
+
+## Local evaluation
+
+The cabinet includes a local scorer:
+
+```bash
+cd cabinets/citizen-science-harbor/102-variable-star-citizen-science
+python3 evaluate_submission.py --submission forum_post_template.txt
+```
+
 ## Files
 
 - `cabinet.yaml`: source of truth
 - `data/public-index.csv`: public sample index with renderable URLs
 - `data/manifest.json`: machine-friendly public index
+- `data/answer-key.json`: answer key used by the local scorer and reviewer
 - `data/images/`: public plot assets
 - `forum_post_template.txt`: repository-side example submission
+- `evaluate_submission.py`: local scorer
