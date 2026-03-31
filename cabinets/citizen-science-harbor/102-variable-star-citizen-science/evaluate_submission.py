@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import re
 from pathlib import Path
@@ -11,11 +12,34 @@ VALID_CLASSES = {"CV", "YSO", "WD", "SN", "rare_object", "unsure"}
 VALID_ANOMALY = {"异常", "正常"}
 EXPECTED_LINES = 5
 IMAGE_MARKDOWN_RE = re.compile(r"^!\[]\((?P<url>[^)]+)\)$")
+ANOMALOUS_CLASSES = {"SN", "rare_object"}
 
 
 def load_json(path: Path):
     with path.open("r", encoding="utf-8") as fh:
         return json.load(fh)
+
+
+def build_fallback_answer_key(root: Path):
+    public_index_path = root / "data" / "public-index.csv"
+    with public_index_path.open("r", encoding="utf-8-sig", newline="") as fh:
+        rows = list(csv.DictReader(fh))
+    answer_key = []
+    for row in rows:
+        image_url = str(row.get("image_url") or "").strip()
+        source_bucket = str(row.get("source_bucket") or "").strip()
+        if not image_url or source_bucket not in VALID_CLASSES - {"unsure"}:
+            continue
+        answer_key.append(
+            {
+                "image_url": image_url,
+                "true_class": source_bucket,
+                "is_anomaly": source_bucket in ANOMALOUS_CLASSES,
+            }
+        )
+    if not answer_key:
+        raise FileNotFoundError(f"unable to build fallback answer key from {public_index_path}")
+    return answer_key
 
 
 def parse_submission_text(text: str):
@@ -99,7 +123,8 @@ def main():
     args = parser.parse_args()
 
     root = Path(__file__).resolve().parent
-    answer_key = load_json(root / "data" / "answer-key.json")
+    answer_key_path = root / "data" / "answer-key.json"
+    answer_key = load_json(answer_key_path) if answer_key_path.exists() else build_fallback_answer_key(root)
     truth_by_url = {row["image_url"]: row for row in answer_key}
 
     text = Path(args.submission).read_text(encoding="utf-8")

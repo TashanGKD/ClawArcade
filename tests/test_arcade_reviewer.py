@@ -44,6 +44,7 @@ class ArcadeReviewerTests(unittest.TestCase):
                         "cabinets": {
                             "cabinets/turing-teahouse/101-CIFAR": {
                                 "cabinet_id": "101-cifar",
+                                "setup_commands": ["cd cabinets/turing-teahouse/101-CIFAR", "uv sync"],
                                 "runtime": {
                                     "cwd": "cabinets/turing-teahouse/101-CIFAR",
                                     "runner": "builtin:101-cifar",
@@ -60,6 +61,7 @@ class ArcadeReviewerTests(unittest.TestCase):
 
             registry = self.module.load_reviewer_registry(path)
             self.assertIn("cabinets/turing-teahouse/101-CIFAR", registry)
+            self.assertEqual(registry["cabinets/turing-teahouse/101-CIFAR"]["setup_commands"][1], "uv sync")
 
     def test_load_reviewer_registry_rejects_malformed_entry(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -169,6 +171,57 @@ class ArcadeReviewerTests(unittest.TestCase):
 
         self.assertEqual(result, ("body", {"score": 1.0}))
         self.assertEqual(calls, [(REPO_ROOT, "cabinets/turing-teahouse/101-CIFAR", 99)])
+
+    def test_evaluate_item_runs_setup_commands_before_runner(self) -> None:
+        item = {
+            "topic": {
+                "metadata": {
+                    "arcade": {
+                        "validator": {
+                            "config": {
+                                "source": "cabinets/demo-family/001-demo",
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        registry = {
+            "cabinets/demo-family/001-demo": {
+                "setup_commands": ["echo prepare"],
+                "runtime": {
+                    "cwd": "cabinets/demo-family/001-demo",
+                    "runner": "builtin:test-runner",
+                    "timeout_seconds": 99,
+                    "max_parallel": 1,
+                    "batch_window": 5,
+                },
+            }
+        }
+
+        calls: list[str] = []
+
+        def fake_runner(item, *, repo_root, registry_entry, timeout):
+            calls.append(registry_entry["source"])
+            return "body", {"score": 1.0}
+
+        setup_completed = subprocess.CompletedProcess(args=["echo", "prepare"], returncode=0, stdout="", stderr="")
+        with mock.patch.dict(self.module.BUILTIN_RUNNERS, {"builtin:test-runner": fake_runner}, clear=False), mock.patch.object(
+            self.module.subprocess,
+            "run",
+            return_value=setup_completed,
+        ) as run_mock:
+            result = self.module.evaluate_item(
+                item,
+                repo_root=REPO_ROOT,
+                registry=registry,
+                timeout=123,
+            )
+
+        self.assertEqual(result, ("body", {"score": 1.0}))
+        self.assertEqual(calls, ["cabinets/demo-family/001-demo"])
+        self.assertEqual(run_mock.call_args.kwargs["cwd"], str(REPO_ROOT))
+        self.assertEqual(run_mock.call_args.args[0], "echo prepare")
 
     def test_evaluate_item_returns_none_for_unknown_source(self) -> None:
         item = {
@@ -488,6 +541,68 @@ class ArcadeReviewerTests(unittest.TestCase):
         self.assertEqual(result["score"], 94.67)
         self.assertEqual(result["raw_points"], 71)
         self.assertEqual(result["coverage"]["newly_covered_count"], 5)
+
+    def test_run_102_variable_star_runtime_error_is_not_reported_as_submission_format_error(self) -> None:
+        item = {
+            "topic": {
+                "id": "topic-102",
+                "metadata": {
+                    "arcade": {
+                        "validator": {
+                            "config": {
+                                "source": "cabinets/citizen-science-harbor/102-variable-star-citizen-science",
+                            }
+                        }
+                    }
+                }
+            },
+            "submission_post": {
+                "id": "submission-102",
+                "body": "\n".join(
+                    [
+                        "![](https://example.com/a.png) | CV | 正常 | reasonable short reason",
+                        "![](https://example.com/b.png) | YSO | 正常 | another acceptable reason",
+                        "![](https://example.com/c.png) | SN | 异常 | transient-like one-off evolution",
+                        "![](https://example.com/d.png) | WD | 正常 | compact and cleaner structure",
+                        "![](https://example.com/e.png) | rare_object | 异常 | highly unusual morphology overall",
+                    ]
+                ),
+            },
+        }
+        registry_entry = {
+            "source": "cabinets/citizen-science-harbor/102-variable-star-citizen-science",
+            "runtime": {
+                "cwd": "cabinets/citizen-science-harbor/102-variable-star-citizen-science",
+                "runner": "builtin:102-variable-star-relay",
+                "timeout_seconds": 60,
+                "max_parallel": 4,
+                "batch_window": 20,
+            },
+        }
+        completed = subprocess.CompletedProcess(
+            args=["python", "evaluate_submission.py"],
+            returncode=1,
+            stdout="",
+            stderr="Traceback: missing answer key\n",
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            cabinet_dir = repo_root / "cabinets" / "citizen-science-harbor" / "102-variable-star-citizen-science"
+            cabinet_dir.mkdir(parents=True, exist_ok=True)
+            (cabinet_dir / "evaluate_submission.py").write_text("", encoding="utf-8")
+
+            with mock.patch.object(self.module.subprocess, "run", return_value=completed):
+                body, result = self.module.run_102_variable_star_relay(
+                    item,
+                    repo_root=repo_root,
+                    registry_entry=registry_entry,
+                    timeout=60,
+                )
+
+        self.assertIn("评测器运行异常", body)
+        self.assertNotIn("提交格式错误", body)
+        self.assertEqual(result["outcome"], "评测器运行异常，请稍后重试。")
 
 
 if __name__ == "__main__":

@@ -50,6 +50,7 @@ class CabinetScriptTests(unittest.TestCase):
         self.assertNotIn("cabinets/almost-human-hall/101-Comforting-a-Graduate-Student", payload["cabinets"])
         entry = payload["cabinets"]["cabinets/turing-teahouse/101-CIFAR"]
         self.assertEqual(entry["runtime"]["runner"], "builtin:101-cifar")
+        self.assertEqual(entry["setup_commands"], ["cd cabinets/turing-teahouse/101-CIFAR", "uv sync"])
 
     def test_render_root_readme_uses_family_yaml_summary(self) -> None:
         cabinets = self.build_module.load_all_cabinets()

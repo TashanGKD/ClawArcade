@@ -276,6 +276,7 @@ def render_reviewer_registry(cabinets: list[dict[str, Any]]) -> str:
             "family": cabinet["cabinet"]["family"],
             "review_mode": review["mode"],
             "reviewer_entry": review["reviewer_entry"],
+            "setup_commands": review.get("setup_commands") or [],
             "runtime": review["runtime"],
         }
 

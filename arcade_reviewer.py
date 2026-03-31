@@ -66,6 +66,8 @@ _log_dir: Path = Path(__file__).resolve().parent / "logs"
 _log_file_date: str | None = None
 _log_fp: TextIO | None = None
 _variable_star_state_lock = threading.Lock()
+_setup_lock = threading.Lock()
+_completed_setups: set[tuple[Path, str]] = set()
 
 VARIABLE_STAR_CABINET_SOURCE = "cabinets/citizen-science-harbor/102-variable-star-citizen-science"
 
@@ -294,12 +296,18 @@ def load_reviewer_registry(path: Path) -> dict[str, dict[str, Any]]:
         if not isinstance(entry, dict):
             raise ValueError(f"invalid reviewer registry entry for {source!r} in {path}")
         runtime = entry.get("runtime")
+        setup_commands = entry.get("setup_commands")
         runner = runtime.get("runner") if isinstance(runtime, dict) else None
         cwd = runtime.get("cwd") if isinstance(runtime, dict) else None
         if not isinstance(runner, str) or not runner.strip():
             raise ValueError(f"invalid reviewer runtime runner for {source!r} in {path}")
         if not isinstance(cwd, str) or not cwd.strip():
             raise ValueError(f"invalid reviewer runtime cwd for {source!r} in {path}")
+        if setup_commands is not None and (
+            not isinstance(setup_commands, list)
+            or any(not isinstance(command, str) or not command.strip() for command in setup_commands)
+        ):
+            raise ValueError(f"invalid reviewer setup_commands for {source!r} in {path}")
         normalized[source] = entry
     return normalized
 
@@ -637,7 +645,16 @@ def extract_cifar_submission_details(config: dict[str, Any]) -> tuple[dict[str, 
     return sanitized, ignored_fields
 
 
-def build_cifar_command(config: dict[str, Any]) -> list[str]:
+def resolve_cabinet_python(cabinet_dir: Path) -> list[str]:
+    venv_python = cabinet_dir / ".venv" / "bin" / "python"
+    if venv_python.exists():
+        return [str(venv_python)]
+    if shutil.which("uv"):
+        return ["uv", "run", "python"]
+    return [sys.executable]
+
+
+def build_cifar_command(config: dict[str, Any], *, cabinet_dir: Path) -> list[str]:
     try:
         epochs = int(config["epochs"])
         batch_size = int(config["batch_size"])
@@ -658,7 +675,7 @@ def build_cifar_command(config: dict[str, Any]) -> list[str]:
     if momentum < 0:
         raise ValueError(f"momentum must be >= 0, got {momentum}")
 
-    runner = ["uv", "run", "python", "train.py"] if shutil.which("uv") else [sys.executable, "train.py"]
+    runner = [*resolve_cabinet_python(cabinet_dir), "train.py"]
     return runner + [
         "--epochs", str(epochs),
         "--lr", str(lr),
@@ -684,7 +701,7 @@ def run_101_cifar(
         raise FileNotFoundError(f"cabinet directory not found: {cabinet_dir}")
 
     try:
-        command = build_cifar_command(config)
+        command = build_cifar_command(config, cabinet_dir=cabinet_dir)
     except ValueError as exc:
         return format_wrong_evaluation(
             cabinet_source=cabinet_source,
@@ -792,7 +809,7 @@ def run_102_variable_star_relay(
         submission_path = Path(tmp) / "submission.txt"
         submission_path.write_text(post_body + "\n", encoding="utf-8")
         command = [
-            sys.executable,
+            *resolve_cabinet_python(cabinet_dir),
             "evaluate_submission.py",
             "--submission",
             str(submission_path),
@@ -809,7 +826,7 @@ def run_102_variable_star_relay(
 
     stdout_lines = [line for line in completed.stdout.splitlines() if line.strip()]
     if len(stdout_lines) < 2 or stdout_lines[-1].strip() != "SUCCESS":
-        return format_wrong_evaluation(
+        return format_evaluator_runtime_error(
             cabinet_source=cabinet_source,
             reason="local evaluator stdout 不符合约定：应输出 JSON 结果并以 SUCCESS 结尾。",
             submission_config={},
@@ -823,7 +840,7 @@ def run_102_variable_star_relay(
     try:
         payload = json.loads("\n".join(stdout_lines[:-1]))
     except json.JSONDecodeError as exc:
-        return format_wrong_evaluation(
+        return format_evaluator_runtime_error(
             cabinet_source=cabinet_source,
             reason=f"local evaluator JSON 解析失败: {exc}",
             submission_config={},
@@ -905,6 +922,49 @@ BUILTIN_RUNNERS = {
 }
 
 
+def ensure_setup_commands(
+    *,
+    repo_root: Path,
+    registry_entry: dict[str, Any],
+    cabinet_source: str,
+    timeout: int,
+) -> tuple[str, dict[str, Any]] | None:
+    setup_commands = registry_entry.get("setup_commands") or []
+    if not setup_commands:
+        return None
+    setup_key = (repo_root.resolve(), cabinet_source)
+    with _setup_lock:
+        if setup_key in _completed_setups:
+            return None
+        for raw_command in setup_commands:
+            command = str(raw_command or "").strip()
+            if not command:
+                continue
+            started_at = time.time()
+            completed = subprocess.run(
+                command,
+                cwd=str(repo_root),
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+            duration = round(time.time() - started_at, 3)
+            if completed.returncode != 0:
+                return format_evaluator_runtime_error(
+                    cabinet_source=cabinet_source,
+                    reason=f"setup command failed: {command}",
+                    submission_config={},
+                    command_executed=command,
+                    stdout_text=completed.stdout or "",
+                    stderr_text=completed.stderr or "",
+                    exit_code=completed.returncode,
+                    duration_seconds=duration,
+                )
+        _completed_setups.add(setup_key)
+    return None
+
+
 def evaluate_item(
     item: dict[str, Any],
     *,
@@ -929,6 +989,14 @@ def evaluate_item(
     effective_timeout = int(runtime.get("timeout_seconds") or timeout)
     runner_entry = dict(registry_entry)
     runner_entry["source"] = source
+    setup_error = ensure_setup_commands(
+        repo_root=repo_root,
+        registry_entry=runner_entry,
+        cabinet_source=source,
+        timeout=effective_timeout,
+    )
+    if setup_error is not None:
+        return setup_error
     return runner(item, repo_root=repo_root, registry_entry=runner_entry, timeout=effective_timeout)
 
 
