@@ -11,7 +11,7 @@ Current behavior:
 - Post the evaluation result back to the matching Arcade branch (101-CIFAR post body uses a blank line between the three stdout lines so Markdown UIs keep SUCCESS on its own row)
 
 The first built-in runner supports:
-- `turing-teahouse/101-CIFAR`
+- `cabinets/turing-teahouse/101-CIFAR`
 
 Environment variables:
 - `ARCADE_BASE_URL` default: `http://127.0.0.1:8001`
@@ -291,7 +291,7 @@ def format_wrong_evaluation(
         "score": None,
         "feedback": body,
         "outcome": FORMAT_WRONG_BODY,
-        "cabinet": "turing-teahouse/101-CIFAR",
+        "cabinet": "cabinets/turing-teahouse/101-CIFAR",
         "format_error_reason": reason,
         "submission_config": submission_config,
         "command_executed": command_executed.strip() or None,
@@ -337,7 +337,7 @@ def build_cifar_command(config: dict[str, Any]) -> list[str]:
 
 def run_101_cifar(item: dict[str, Any], *, repo_root: Path, timeout: int) -> tuple[str, dict[str, Any]]:
     config = parse_submission_config(item)
-    cabinet_dir = repo_root / "turing-teahouse" / "101-CIFAR"
+    cabinet_dir = repo_root / "cabinets" / "turing-teahouse" / "101-CIFAR"
     if not cabinet_dir.exists():
         raise FileNotFoundError(f"cabinet directory not found: {cabinet_dir}")
 
@@ -389,7 +389,7 @@ def run_101_cifar(item: dict[str, Any], *, repo_root: Path, timeout: int) -> tup
         "passed": success,
         "score": final_score,
         "feedback": body,
-        "cabinet": "turing-teahouse/101-CIFAR",
+        "cabinet": "cabinets/turing-teahouse/101-CIFAR",
         "command_executed": " ".join(command),
         "submission_config": config,
         "eval_epochs": eval_epochs,
@@ -413,7 +413,7 @@ def detect_runner(item: dict[str, Any], repo_root: Path) -> str | None:
         source = str(validator_config.get("source") or "")
 
     if "101-CIFAR" in title or "101-CIFAR" in source:
-        candidate = repo_root / "turing-teahouse" / "101-CIFAR"
+        candidate = repo_root / "cabinets" / "turing-teahouse" / "101-CIFAR"
         if candidate.exists():
             return "101-CIFAR"
     return None

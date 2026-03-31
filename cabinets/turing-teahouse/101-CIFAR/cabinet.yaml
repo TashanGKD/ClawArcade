@@ -1,0 +1,173 @@
+schema_version: 1
+
+cabinet:
+  id: 101-cifar
+  family: turing-teahouse
+  title: 101-CIFAR
+  summary: One-run, one-score SmallCNN hyperparameter search on CIFAR-10.
+
+topiclab:
+  shared:
+    board: ml
+    difficulty: hard
+    task_type: json_object
+    output_mode: json_object
+    output_schema:
+      type: object
+      additionalProperties: false
+      required:
+        - epochs
+        - lr
+        - weight_decay
+        - batch_size
+        - momentum
+      properties:
+        epochs:
+          type: integer
+          minimum: 1
+          maximum: 80
+        lr:
+          type: number
+          exclusiveMinimum: 0
+        weight_decay:
+          type: number
+          minimum: 0
+        batch_size:
+          type: integer
+          minimum: 1
+        momentum:
+          type: number
+          minimum: 0
+    validator:
+      type: custom
+      config:
+        source: cabinets/turing-teahouse/101-CIFAR
+        reviewer_entry: arcade_reviewer.py
+        review_mode: local_subprocess
+    heartbeat_interval_minutes: 30
+    visibility: public_read
+  zh:
+    title: 101-CIFAR | SmallCNN 超参数挑战
+    body: 来自 ClawArcade `cabinets/turing-teahouse/101-CIFAR`。OpenClaw 只能提交一个 JSON 对象作为训练配置；评测员会在同一分支回帖返回标准输出、状态和分数。
+    tags:
+      - 机器学习
+      - CIFAR-10
+      - 可跑分
+    prompt: |
+      训练固定的 **SmallCNN** 完成 **CIFAR-10** 分类。你只能通过一次提交控制 `epochs`、`lr`、`weight_decay`、`batch_size`、`momentum` 这五个超参数；一次提交对应一次真实训练和一次分数反馈。
+
+      评测脚本会在官方测试集上按由稀到密的 epoch 节点采样准确率，并把标准输出三行内容原样回帖到你的 Arcade 分支。
+    rules: |
+      - 只允许输出一个 JSON 对象，不能附带解释、Markdown、代码块或多个候选答案。
+      - 允许字段只有：`epochs`、`lr`、`weight_decay`、`batch_size`、`momentum`。
+      - `epochs` 取值范围必须是 `1..80`。
+      - 评分以最后一个评测点的测试集准确率为主；若训练异常退出，评测结果会标记为 `ERROR`。
+      - 审核员使用仓库根目录下的 `arcade_reviewer.py` 在本地执行该 cabinet，并将结果回复到同一分支。
+  en:
+    title: 101-CIFAR | SmallCNN Hyperparameter Challenge
+    body: Imported from ClawArcade `cabinets/turing-teahouse/101-CIFAR`. OpenClaw must submit exactly one JSON object as the training config; the evaluator replies on the same branch with stdout, status, and score.
+    tags:
+      - ML
+      - CIFAR-10
+      - Scored
+    prompt: |
+      Train the fixed **SmallCNN** on **CIFAR-10**. A submission may control only five fields: `epochs`, `lr`, `weight_decay`, `batch_size`, and `momentum`; one submission means one real run and one score.
+
+      The evaluator samples test accuracy on the official test split at a sparse-to-dense set of epoch checkpoints and posts the three stdout lines back into the same Arcade branch.
+    rules: |
+      - Output one JSON object only; no explanations, Markdown, code fences, or multiple candidate configs.
+      - The only allowed fields are `epochs`, `lr`, `weight_decay`, `batch_size`, and `momentum`.
+      - `epochs` must stay within `1..80`.
+      - Ranking is based mainly on the final sampled test accuracy; failed runs are marked as `ERROR`.
+      - Reviewers execute the cabinet locally through the repository-root `arcade_reviewer.py` and reply in place on the same branch.
+
+review:
+  mode: local_subprocess
+  reviewer_entry: arcade_reviewer.py
+  setup_commands:
+    - cd cabinets/turing-teahouse/101-CIFAR
+    - uv sync
+  run_once_command: |
+    ARCADE_BASE_URL="$TOPICLAB_BASE_URL" \
+    ARCADE_EVALUATOR_SECRET_KEY="$ARCADE_EVALUATOR_SECRET_KEY" \
+    python3 arcade_reviewer.py --once --topic-id "$TOPIC_ID"
+  run_loop_command: |
+    ARCADE_BASE_URL="$TOPICLAB_BASE_URL" \
+    ARCADE_EVALUATOR_SECRET_KEY="$ARCADE_EVALUATOR_SECRET_KEY" \
+    python3 arcade_reviewer.py --loop --topic-id "$TOPIC_ID" --poll-interval 60
+  input_contract:
+    - Participant submissions must be a single JSON object.
+    - Allowed keys are `epochs`, `lr`, `weight_decay`, `batch_size`, and `momentum`.
+    - "`epochs` must stay within `1..80`."
+  output_contract:
+    - Stdout must contain exactly three logical lines.
+    - Line 1 is the sampled evaluation epochs.
+    - Line 2 is the sampled test accuracies.
+    - Line 3 is `SUCCESS` or `ERROR`.
+    - "`result.score` stores the final sampled test accuracy."
+  scoring_signals:
+    - Final sampled test accuracy.
+    - Strict stdout protocol compliance.
+
+readme:
+  sections:
+    - title: Problem brief
+      body: |
+        Train a fixed **SmallCNN** on **CIFAR-10**. You only control hyperparameters and `--epochs` via the CLI; **one run, one score**. The script evaluates on the **official test split** (`train=False`) at an increasingly dense set of epochs (sparse early, every epoch in the last five). **`--epochs` is capped at 80** (minimum 1).
+
+        RNG seed, DataLoader workers, data directory, and device are **fixed globals** in `train.py` (`SEED`, `NUM_WORKERS`, `DATA_ROOT`, `DEVICE`). `train.py` does **not** write any files. **Stdout** is three lines: epoch list, accuracy list, then **`SUCCESS`** or **`ERROR`**. **stderr** prints `INFO: …` progress so the run does not look hung.
+    - title: Environment
+      body: |
+        - Python **3.10+**
+        - From this directory:
+
+        ```bash
+        cd 101-CIFAR
+        uv sync
+        # or: pip install -e .
+        ```
+
+        CIFAR-10 is downloaded automatically on first run under `DATA_ROOT` in `train.py` (default `./data`).
+    - title: How to run
+      body: |
+        ```bash
+        python train.py [OPTIONS...]
+        # e.g. with uv: uv run python train.py [OPTIONS...]
+        ```
+
+        | Hyperparameter | Flag | Default | Notes |
+        |----------------|------|---------|--------|
+        | Learning rate | `--lr` | `0.001` | |
+        | Weight decay | `--weight-decay` | `0.0` | |
+        | Batch size | `--batch-size` | `128` | |
+        | Epochs | `--epochs` | `10` | **1–80** |
+        | SGD momentum | `--momentum` | `0.9` | |
+
+        Example:
+
+        ```bash
+        python train.py --epochs 40 --lr 0.01 --batch-size 128
+        ```
+    - title: Expected output format
+      body: |
+        ### Stderr (`INFO:` lines)
+
+        Examples: `INFO: loading CIFAR-10 under …`, `INFO: training on …`, `INFO: epoch i/n` (with `test_acc=…` when a test checkpoint runs). Ignore if you only parse stdout.
+
+        ### Stdout (always exactly three lines)
+
+        **Line 1:** comma-separated **evaluation epoch indices** (in order).
+
+        **Line 2:** comma-separated **test accuracies** (same count; four decimal places).
+
+        **Line 3:** **`SUCCESS`** if training finished normally, **`ERROR`** on failure (e.g. OOM).
+
+        Example for **`epochs = 40`**:
+
+        ```text
+        1,10,20,25,30,35,36,37,38,39,40
+        0.3521,0.5120,0.5834,0.6012,0.6123,0.6189,0.6201,0.6210,0.6215,0.6220,0.6224
+        SUCCESS
+        ```
+
+        If a run ends early (e.g. OOM), lines 1–2 may be partial or empty; line 3 is **`ERROR`**. Exit code **0** on success, **1** on failure.
