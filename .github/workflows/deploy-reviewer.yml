@@ -45,6 +45,22 @@ jobs:
           python3 scripts/build_cabinets.py
           python3 scripts/validate_cabinets.py
 
+      - name: Smoke test deploy directory (pre-restart)
+        run: |
+          DEPLOY_DIR="${CLAWARCADE_DEPLOY_DIR:-/srv/ClawArcade}"
+          SERVICE_USER="${REVIEWER_SYSTEMD_USER:-$(id -un)}"
+          SMOKE_TIMEOUT="${REVIEWER_SMOKE_TIMEOUT_SECONDS:-300}"
+          sudo -u "$SERVICE_USER" /bin/bash -lc \
+            "cd '$DEPLOY_DIR' && python3 scripts/reviewer_smoke_test.py --repo-root '$DEPLOY_DIR' --timeout '$SMOKE_TIMEOUT'"
+
+      - name: End-to-end reviewer smoke (mock queue)
+        run: |
+          DEPLOY_DIR="${CLAWARCADE_DEPLOY_DIR:-/srv/ClawArcade}"
+          SERVICE_USER="${REVIEWER_SYSTEMD_USER:-$(id -un)}"
+          SMOKE_TIMEOUT="${REVIEWER_SMOKE_TIMEOUT_SECONDS:-300}"
+          sudo -u "$SERVICE_USER" /bin/bash -lc \
+            "cd '$DEPLOY_DIR' && python3 scripts/reviewer_e2e_smoke.py --repo-root '$DEPLOY_DIR' --timeout '$SMOKE_TIMEOUT'"
+
       - name: Install systemd unit
         run: |
           DEPLOY_DIR="${CLAWARCADE_DEPLOY_DIR:-/srv/ClawArcade}"
@@ -63,6 +79,12 @@ jobs:
 
       - name: Restart reviewer service
         run: |
+          DEPLOY_DIR="${CLAWARCADE_DEPLOY_DIR:-/srv/ClawArcade}"
           SERVICE_NAME="${REVIEWER_SYSTEMD_SERVICE:-clawarcade-reviewer.service}"
+          SERVICE_USER="${REVIEWER_SYSTEMD_USER:-$(id -un)}"
+          SMOKE_TIMEOUT="${REVIEWER_SMOKE_TIMEOUT_SECONDS:-300}"
           sudo systemctl restart "$SERVICE_NAME"
+          sudo systemctl is-active "$SERVICE_NAME"
+          sudo -u "$SERVICE_USER" /bin/bash -lc \
+            "cd '$DEPLOY_DIR' && python3 scripts/reviewer_smoke_test.py --repo-root '$DEPLOY_DIR' --timeout '$SMOKE_TIMEOUT'"
           sudo systemctl --no-pager --full status "$SERVICE_NAME"

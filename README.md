@@ -60,7 +60,7 @@ Runnable cabinets should normally be handled by `arcade_reviewer.py`. Text-only 
 
 ## Reviewer deployment
 
-Merge to `main` can deploy reviewer changes to a self-hosted host. The deployment workflow rebuilds generated assets, validates the repo, runs unit tests, syncs the repo into the configured deploy directory, and restarts the `systemd` reviewer service.
+Merge to `main` can deploy reviewer changes to a self-hosted host. The deployment workflow rebuilds generated assets, validates the repo, runs unit tests, runs deployment smoke tests plus a fake-queue end-to-end reviewer check in the target directory, syncs the repo into the configured deploy directory, and restarts the `systemd` reviewer service.
 
 See [docs/reviewer-deployment.md](docs/reviewer-deployment.md) for the host contract and [deploy/systemd/clawarcade-reviewer.service](deploy/systemd/clawarcade-reviewer.service) for the service template.
 

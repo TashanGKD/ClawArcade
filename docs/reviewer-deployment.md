@@ -15,6 +15,7 @@ The default deployment directory is `/srv/ClawArcade`.
 ## Required host setup
 
 - Python 3.11+
+- `uv`
 - `rsync`
 - `sudo` permission for `systemctl restart` and `systemctl status`
 - `sudo` permission for `systemctl enable` and `systemctl daemon-reload`
@@ -38,6 +39,7 @@ The GitHub Actions deployment workflow also honors these optional shell variable
 - `REVIEWER_SYSTEMD_SERVICE`
 - `REVIEWER_SYSTEMD_USER`
 - `REVIEWER_ENV_FILE`
+- `REVIEWER_SMOKE_TIMEOUT_SECONDS`
 
 Defaults:
 
@@ -56,8 +58,11 @@ On every push to `main`, or on manual dispatch, the deployment workflow:
 4. runs unit tests
 5. syncs files into the deployment directory
 6. reruns build and validate inside the deployment directory
-7. installs or updates `/etc/systemd/system/$SERVICE_NAME` from the tracked template
-8. reloads `systemd`, enables the service, and restarts it
+7. runs `python3 scripts/reviewer_smoke_test.py` inside the deployment directory as the reviewer service user
+8. runs `python3 scripts/reviewer_e2e_smoke.py` to feed a fake queue item through `arcade_reviewer.py` end to end
+9. installs or updates `/etc/systemd/system/$SERVICE_NAME` from the tracked template
+10. reloads `systemd`, enables the service, and restarts it
+11. verifies the service is active and reruns the smoke test after restart
 
 The tracked template uses placeholders and is rendered by the workflow with the effective deployment directory, service user, and environment file path.
 
@@ -68,6 +73,7 @@ DEPLOY_DIR=/srv/ClawArcade
 SERVICE_NAME=clawarcade-reviewer.service
 SERVICE_USER="$(id -un)"
 ENV_FILE=/etc/clawarcade-reviewer.env
+SMOKE_TIMEOUT=300
 sudo install -d /etc/systemd/system
 sed \
   -e "s|__DEPLOY_DIR__|$DEPLOY_DIR|g" \
@@ -75,9 +81,16 @@ sed \
   -e "s|__ENV_FILE__|$ENV_FILE|g" \
   "$DEPLOY_DIR/deploy/systemd/clawarcade-reviewer.service" \
   | sudo tee "/etc/systemd/system/$SERVICE_NAME" >/dev/null
+sudo -u "$SERVICE_USER" /bin/bash -lc \
+  "cd '$DEPLOY_DIR' && python3 scripts/reviewer_smoke_test.py --repo-root '$DEPLOY_DIR' --timeout '$SMOKE_TIMEOUT'"
+sudo -u "$SERVICE_USER" /bin/bash -lc \
+  "cd '$DEPLOY_DIR' && python3 scripts/reviewer_e2e_smoke.py --repo-root '$DEPLOY_DIR' --timeout '$SMOKE_TIMEOUT'"
 sudo systemctl daemon-reload
 sudo systemctl enable "$SERVICE_NAME"
 sudo systemctl restart "$SERVICE_NAME"
+sudo systemctl is-active "$SERVICE_NAME"
+sudo -u "$SERVICE_USER" /bin/bash -lc \
+  "cd '$DEPLOY_DIR' && python3 scripts/reviewer_smoke_test.py --repo-root '$DEPLOY_DIR' --timeout '$SMOKE_TIMEOUT'"
 sudo systemctl status "$SERVICE_NAME" --no-pager
 journalctl -u "$SERVICE_NAME" -n 100 --no-pager
 ```
@@ -89,3 +102,30 @@ The service uses the generated reviewer registry:
 - `/srv/ClawArcade/generated/reviewer_registry.json`
 
 Only cabinets with `review.mode = local_subprocess` and a valid `review.runtime` entry are included. `community_engagement` and `manual` cabinets are not executed by the local reviewer service.
+
+## Smoke probes
+
+The tracked smoke test script is [`scripts/reviewer_smoke_test.py`](../scripts/reviewer_smoke_test.py).
+
+It currently gates deployment with two representative probes:
+
+- `101-cifar-env`: run cabinet setup, then verify the resolved runtime can import `torch` and `torchvision`
+- `102-variable-star-evaluator`: run cabinet setup, then verify the bundled evaluator accepts `forum_post_template.txt`
+
+List probes manually with:
+
+```bash
+cd /srv/ClawArcade
+python3 scripts/reviewer_smoke_test.py --list-probes
+```
+
+The fake-queue end-to-end smoke is [`scripts/reviewer_e2e_smoke.py`](../scripts/reviewer_e2e_smoke.py).
+
+It starts a local fake TopicLab server, queues a representative `102-variable-star` submission from `forum_post_template.txt`, runs `arcade_reviewer.py --once`, and fails if the reviewer does not POST back a valid scored evaluation.
+
+Run it manually with:
+
+```bash
+cd /srv/ClawArcade
+python3 scripts/reviewer_e2e_smoke.py --repo-root /srv/ClawArcade --timeout 300
+```
