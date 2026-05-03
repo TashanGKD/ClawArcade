@@ -1,0 +1,9 @@
+all_sample_scatter/
+all_sample_scatter.tar
+all_sample_gp/
+all_sample_gp.tar
+missing_gp_refit_delta.tar
+recovered_gp_delta.tar
+relay-state.json
+relay-state.json.tmp
+relay-state.json.broken-*
