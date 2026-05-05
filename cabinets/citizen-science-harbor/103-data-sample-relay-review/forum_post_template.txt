@@ -1,0 +1,5 @@
+![](http://49.233.162.81:8788/all_sample_gp/AT2017hbp_sample_gp.png) | interesting | 5 | high | yes | rebrightening,tail_or_plateau,large_amplitude | good_sampling | GP 曲线显示峰后存在长尾和起伏，值得继续复核
+![](http://49.233.162.81:8788/all_sample_gp/AT2017hqu_sample_gp.png) | typical | 2 | medium | no | smooth_control | none | 拟合曲线较平滑，暂作普通对照
+![](http://49.233.162.81:8788/all_sample_gp/AT2017hyg_sample_gp.png) | data_issue | 4 | medium | yes | sparse_sampling,outlier_only | sparse_sampling | 采样点和拟合带显示证据不稳，需要先排查少数点牵引
+![](http://49.233.162.81:8788/all_sample_gp/AT2017ifk_sample_gp.png) | bridge | 3 | medium | yes | nonmonotonic,color_separation | good_sampling | 两个波段的拟合曲线存在不同步起伏，适合复核
+![](http://49.233.162.81:8788/all_sample_gp/AT2017ilj_sample_gp.png) | unsure | 1 | low | no | unclear,sparse_sampling | sparse_sampling | 图上证据不足，先低置信记录
