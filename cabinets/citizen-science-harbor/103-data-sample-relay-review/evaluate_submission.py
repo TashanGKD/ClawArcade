@@ -79,6 +79,8 @@ def image_key(value: str) -> str:
     parsed = urlparse(value.strip())
     path = parsed.path if parsed.scheme or parsed.netloc else value.strip()
     name = Path(path).name
+    if name.endswith("_sample_review.png"):
+        return name[: -len("_sample_review.png")]
     if name.endswith("_sample_gp.png"):
         return name[: -len("_sample_gp.png")]
     if name.endswith("_sample_scatter.png"):
@@ -120,8 +122,8 @@ def validate_line(line: str, expected_index: int, manifest_keys: set[str]) -> di
 
     if not image_match:
         errors.append("first field must be a markdown image URL like ![](https://.../name.png)")
-    elif "/all_sample_scatter/" not in image_url and "/all_sample_gp/" not in image_url:
-        errors.append("image URL must point to the all_sample_gp or all_sample_scatter asset path")
+    elif "/all_sample_review/" not in image_url and "/all_sample_scatter/" not in image_url and "/all_sample_gp/" not in image_url:
+        errors.append("image URL must point to the all_sample_review, all_sample_gp, or all_sample_scatter asset path")
     elif manifest_keys and key not in manifest_keys:
         errors.append(f"image URL is not present in full-manifest.json: {key}")
     if role not in ROLES:

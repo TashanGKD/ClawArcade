@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Stateful relay server for the DATA_SAMPLE public-science preview.
+"""Stateful data server for the DATA_SAMPLE public-science relay.
 
-It keeps the existing static URLs working, while adding a small JSON API for
-global claim, submission, coverage, and score tracking.
+It keeps image URLs and batch assignment available to TopicLab Arcade. Official
+submissions and evaluator feedback live in TopicLab branches, not in this
+service.
 """
 
 from __future__ import annotations
@@ -25,6 +26,14 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
+
+try:
+    from PIL import Image, ImageChops, ImageDraw, ImageFont
+except Exception:  # pragma: no cover - image composition is an optional display aid.
+    Image = None
+    ImageChops = None
+    ImageDraw = None
+    ImageFont = None
 
 
 ROOT = Path(__file__).resolve().parent
@@ -261,17 +270,16 @@ FOLLOWUP_ROLES = {"interesting", "bridge", "data_issue"}
 LOW_PRIORITY_ROLES = {"typical", "control"}
 LINE_SCORE_MAX = 10
 PUBLIC_STATIC_FILES = {
-    "/",
-    "/index.html",
-    "/play.html",
-    "/topiclab-preview.html",
-    "/skill.md",
+    "/all_sample_gp.tar",
+    "/all_sample_scatter.tar",
 }
 PUBLIC_IMAGE_PREFIXES = (
+    "/public/",
+    "/all_sample_review/",
     "/all_sample_gp/",
     "/all_sample_scatter/",
 )
-PUBLIC_IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp")
+PUBLIC_IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".svg")
 
 
 state_lock = threading.Lock()
@@ -306,7 +314,7 @@ def load_feature_cards() -> dict[str, dict[str, Any]]:
 
 def source_id_from_filename(path: Path) -> str:
     name = path.name
-    for suffix in ("_sample_scatter.png", "_level_scatter.png", "_scatter.png"):
+    for suffix in ("_sample_review.png", "_sample_gp.png", "_sample_scatter.png", "_level_scatter.png", "_scatter.png"):
         if name.endswith(suffix):
             return name[: -len(suffix)]
     return path.stem
@@ -341,6 +349,8 @@ def canonical_path(url_or_path: str) -> str:
 
 def image_key(url_or_path: str) -> str:
     path = canonical_path(url_or_path)
+    if "/all_sample_review/" in path:
+        return "/all_sample_review/" + path.split("/all_sample_review/", 1)[1]
     if "/all_sample_gp/" in path:
         return "/all_sample_gp/" + path.split("/all_sample_gp/", 1)[1]
     if "/all_sample_scatter/" in path:
@@ -362,7 +372,14 @@ def batch_items(batch_number: int) -> list[dict[str, Any]]:
 
 def normalize_item(item: dict[str, Any]) -> dict[str, Any]:
     normalized = dict(item)
-    normalized["image_key"] = str(normalized.get("source_id") or image_key(normalized.get("image_url", "")))
+    source_id = str(normalized.get("source_id") or "").strip()
+    if source_id:
+        normalized["gp_image_url"] = normalized.get("gp_image_url") or normalized.get("image_url")
+        normalized["scatter_image_url"] = normalized.get("scatter_image_url") or f"/all_sample_scatter/{source_id}_sample_scatter.png"
+        normalized["review_image_url"] = f"/all_sample_review/{source_id}_sample_review.png"
+        normalized["image_url"] = normalized["review_image_url"]
+        normalized["image_mode"] = "scatter_with_feature_card"
+    normalized["image_key"] = str(source_id or image_key(normalized.get("image_url", "")))
     normalized["batch_number"] = batch_number_for_index(
         int(normalized.get("global_index") or 1),
         int(load_manifest().get("batch_size") or 5),
@@ -387,6 +404,8 @@ def manifest_items_by_key() -> dict[str, dict[str, Any]]:
             key = image_key(item.get(field, ""))
             if key:
                 by_key[key] = normalized
+        if normalized.get("review_image_url"):
+            by_key[image_key(str(normalized["review_image_url"]))] = normalized
     manifest_key_cache = by_key
     return by_key
 
@@ -455,7 +474,7 @@ def canonical_coverage_key(key: str, entry: dict[str, Any] | None = None) -> str
     if item and item.get("source_id"):
         return str(item["source_id"])
     name = Path(canonical_path(key)).name
-    for suffix in ("_sample_gp.png", "_sample_scatter.png", "_level_scatter.png", "_scatter.png"):
+    for suffix in ("_sample_review.png", "_sample_gp.png", "_sample_scatter.png", "_level_scatter.png", "_scatter.png"):
         if name.endswith(suffix):
             return name[: -len(suffix)]
     return key
@@ -1176,7 +1195,7 @@ def parse_access_seen() -> set[str]:
                 if not match:
                     continue
                 path = match.group(1)
-                if path.startswith("/all_sample_scatter/") or path.startswith("/all_sample_gp/"):
+                if path.startswith("/all_sample_review/") or path.startswith("/all_sample_scatter/") or path.startswith("/all_sample_gp/"):
                     key = image_key(path)
                     item = by_key.get(key)
                     seen.add(str(item.get("image_key")) if item else key)
@@ -1198,6 +1217,20 @@ def active_claimed_keys(state: dict[str, Any], ttl_seconds: int = DEFAULT_CLAIM_
     return active
 
 
+def historically_claimed_keys(state: dict[str, Any]) -> set[str]:
+    """Images handed out at least once.
+
+    TopicLab Arcade is the official submission surface, so this data service
+    may not see a matching `/api/submit` call. Treat claims themselves as
+    soft coverage for future assignment, then fall back only when the pool is
+    exhausted or fragmented.
+    """
+    claimed: set[str] = set()
+    for claim in state.get("claims", {}).values():
+        claimed.update(claim.get("image_keys") or [])
+    return claimed
+
+
 def status_payload(state: dict[str, Any]) -> dict[str, Any]:
     manifest = load_manifest()
     pool_size = int(manifest.get("pool_size") or len(manifest.get("items") or []))
@@ -1205,7 +1238,9 @@ def status_payload(state: dict[str, Any]) -> dict[str, Any]:
     seen_from_log = parse_access_seen()
     covered = set(state.get("covered", {}).keys())
     active = active_claimed_keys(state)
-    effective_seen = covered | active
+    assigned = historically_claimed_keys(state)
+    effective_seen = covered | assigned
+    next_batch, next_items, next_mode = select_claim_items(state, skip_seen_logs=False)
     return {
         "ok": True,
         "task_id": manifest.get("task_id", "103-data-sample-relay-review"),
@@ -1213,6 +1248,7 @@ def status_payload(state: dict[str, Any]) -> dict[str, Any]:
         "batch_size": int(manifest.get("batch_size") or 5),
         "batch_count": batch_count,
         "covered_count": len(covered),
+        "assigned_count": len(assigned),
         "access_seen_count": len(seen_from_log),
         "active_claimed_count": len(active),
         "effective_seen_count": len(effective_seen),
@@ -1221,7 +1257,9 @@ def status_payload(state: dict[str, Any]) -> dict[str, Any]:
         "claim_count": len(state.get("claims", {})),
         "submission_count": len(state.get("submissions", [])),
         "updated_at": state.get("updated_at"),
-        "next_batch": find_next_batch(state, skip_seen_logs=False),
+        "next_batch": next_batch,
+        "next_claim_mode": next_mode,
+        "next_claim_size": len(next_items),
     }
 
 
@@ -1319,7 +1357,7 @@ def public_leaderboard_payload(state: dict[str, Any]) -> dict[str, Any]:
         "ok": True,
         "generated_at": now_iso(),
         "rules": {
-            "public_note": "公开看台只展示接力进展和参与者聚合状态；隐藏候选和阶段复核标准不进入现场判读。",
+            "public_note": "公开接口只展示接力进展和参与者聚合状态；隐藏候选和阶段复核标准不进入现场判读。",
         },
         "items": effectiveness_items,
         "participation_items": participation_items,
@@ -1424,17 +1462,63 @@ def find_next_batch(state: dict[str, Any], skip_seen_logs: bool) -> int | None:
     batch_count = int(manifest.get("batch_count") or 0)
     covered = set(state.get("covered", {}).keys())
     active = active_claimed_keys(state)
+    assigned = historically_claimed_keys(state)
     historical = parse_access_seen() if skip_seen_logs else set()
-    blocked = covered | active | historical
+    preferred_blocked = covered | assigned | historical
+    safe_blocked = covered | active | historical
 
     fallback: int | None = None
     for batch_number in range(1, batch_count + 1):
         keys = [item["image_key"] for item in batch_items(batch_number)]
-        if keys and all(key not in covered and key not in active for key in keys) and fallback is None:
+        if keys and all(key not in safe_blocked for key in keys) and fallback is None:
             fallback = batch_number
-        if keys and all(key not in blocked for key in keys):
+        if keys and all(key not in preferred_blocked for key in keys):
             return batch_number
     return fallback
+
+
+def select_claim_items(state: dict[str, Any], skip_seen_logs: bool) -> tuple[int | None, list[dict[str, Any]], str]:
+    """Pick the next claim without relying only on fixed manifest batches.
+
+    Fixed 5-image batches are still preferred because they are easy to reason
+    about. If historical submissions or organizer backfills partially cover a
+    fixed batch, this function can stitch together remaining unseen images so
+    the tail of the pool does not get stranded.
+    """
+    manifest = load_manifest()
+    batch_size = int(manifest.get("batch_size") or 5)
+    batch_count = int(manifest.get("batch_count") or 0)
+    all_items = [normalize_item(item) for item in (manifest.get("items") or [])]
+    covered = set(state.get("covered", {}).keys())
+    active = active_claimed_keys(state)
+    assigned = historically_claimed_keys(state)
+    historical = parse_access_seen() if skip_seen_logs else set()
+    preferred_blocked = covered | assigned | historical
+    safe_blocked = covered | active | historical
+
+    fallback_batch: int | None = None
+    fallback_items: list[dict[str, Any]] = []
+    for batch_number in range(1, batch_count + 1):
+        items = batch_items(batch_number)
+        keys = [item["image_key"] for item in items]
+        if keys and all(key not in safe_blocked for key in keys) and fallback_batch is None:
+            fallback_batch = batch_number
+            fallback_items = items
+        if keys and all(key not in preferred_blocked for key in keys):
+            return batch_number, items, "scheduled_batch"
+
+    stitched = [item for item in all_items if item.get("image_key") not in preferred_blocked]
+    if stitched:
+        return None, stitched[:batch_size], "stitched_unseen"
+
+    if fallback_batch is not None:
+        return fallback_batch, fallback_items, "recycled_batch"
+
+    recycled = [item for item in all_items if item.get("image_key") not in safe_blocked]
+    if recycled:
+        return None, recycled[:batch_size], "stitched_recycled"
+
+    return None, [], "exhausted"
 
 
 def make_claim(body: dict[str, Any]) -> dict[str, Any]:
@@ -1444,21 +1528,21 @@ def make_claim(body: dict[str, Any]) -> dict[str, Any]:
     with state_lock:
         state = load_state()
         if requested_batch is None:
-            batch_number = find_next_batch(state, skip_seen_logs=skip_seen_logs)
+            batch_number, items, claim_mode = select_claim_items(state, skip_seen_logs=skip_seen_logs)
         else:
             batch_number = int(requested_batch)
-        if not batch_number:
-            return {"ok": False, "error": "no available batch"}
-
-        items = batch_items(batch_number)
+            items = batch_items(batch_number)
+            claim_mode = "manual_batch"
         if not items:
-            return {"ok": False, "error": f"batch {batch_number} not found"}
+            return {"ok": False, "error": "no available batch"}
 
         claim_id = uuid.uuid4().hex
         claim = {
             "claim_id": claim_id,
             "participant_id": participant_id,
             "batch_number": batch_number,
+            "claim_mode": claim_mode,
+            "items": items,
             "image_keys": [item["image_key"] for item in items],
             "status": "claimed",
             "claimed_at": now_iso(),
@@ -1472,10 +1556,224 @@ def make_claim(body: dict[str, Any]) -> dict[str, Any]:
         "claim_id": claim_id,
         "participant_id": participant_id,
         "batch_number": batch_number,
+        "claim_mode": claim_mode,
         "items": items,
-        "submit_to": "/api/submit",
+        "submit_to": "TopicLab Arcade branch reply",
         "output_format": "![](image_url) | role | anomaly_score | confidence | needs_followup | evidence_tags | quality_flags | reason",
+        "note": "This service only assigns images. Submit the five-line answer in the TopicLab Arcade branch.",
     }
+
+
+def review_source_id_from_path(path: str) -> str:
+    name = Path(urlparse(path).path).name
+    for suffix in ("_sample_review.png", "_review.png"):
+        if name.endswith(suffix):
+            return name[: -len(suffix)]
+    return Path(name).stem
+
+
+def image_file_for_source(source_id: str, kind: str) -> Path:
+    if kind == "scatter":
+        candidates = [
+            ROOT / "all_sample_scatter" / f"{source_id}_sample_scatter.png",
+            ROOT / "all_sample_scatter" / f"{source_id}_scatter.png",
+        ]
+    else:
+        candidates = [
+            ROOT / "all_sample_gp" / f"{source_id}_sample_gp.png",
+            ROOT / "all_sample_gp" / f"{source_id}_gp.png",
+        ]
+    return next((path for path in candidates if path.exists()), candidates[0])
+
+
+def load_display_font(size: int, *, bold: bool = False) -> Any:
+    if ImageFont is None:
+        return None
+    candidates = [
+        Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc" if bold else "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"),
+        Path("/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc" if bold else "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc"),
+        Path("/usr/share/fonts/opentype/noto/NotoSansCJKsc-Bold.otf" if bold else "/usr/share/fonts/opentype/noto/NotoSansCJKsc-Regular.otf"),
+        Path("C:/Windows/Fonts/msyhbd.ttc" if bold else "C:/Windows/Fonts/msyh.ttc"),
+        Path("C:/Windows/Fonts/simkai.ttf"),
+        Path("C:/Windows/Fonts/simsun.ttc"),
+        Path("C:/Windows/Fonts/simhei.ttf"),
+        Path("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"),
+        Path("/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc"),
+        Path("/usr/share/fonts/truetype/arphic/ukai.ttc"),
+        Path("/usr/share/fonts/truetype/arphic/uming.ttc"),
+        Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"),
+        Path("/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc"),
+        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+    ]
+    for path in candidates:
+        if path.exists():
+            try:
+                return ImageFont.truetype(str(path), size)
+            except OSError:
+                continue
+    return ImageFont.load_default()
+
+
+def wrap_text(draw: Any, text: str, font: Any, max_width: int) -> list[str]:
+    lines: list[str] = []
+    current = ""
+    for char in str(text or ""):
+        candidate = current + char
+        bbox = draw.textbbox((0, 0), candidate, font=font)
+        if current and bbox[2] - bbox[0] > max_width:
+            lines.append(current)
+            current = char
+        else:
+            current = candidate
+    if current:
+        lines.append(current)
+    return lines
+
+
+def compact_feature_lines(source_id: str) -> list[str]:
+    card = load_feature_cards().get(source_id, {})
+    if not card:
+        return ["特征卡暂缺；以图像形态为主。"]
+    rows = [
+        f"观测点 {card.get('n_obs') or '-'}；z={card.get('z') or '-'}；host_dlr={card.get('host_dlr') or '-'}",
+        f"质量 {card.get('quality_tier') or '-'}；完整度 {card.get('feature_completeness') or '-'}",
+        f"M≈{card.get('M_completed') or '-'}；dm15≈{card.get('dm15_completed') or '-'}；振幅≈{card.get('amplitude_completed') or '-'}",
+        f"再亮计数≈{card.get('rebrightening_completed') or '0'}；峰值SNR≈{card.get('peak_snr') or '-'}",
+    ]
+    context: list[str] = []
+    if card.get("gaia_is_stellar") or card.get("var_evidence"):
+        context.append("恒星/变源上下文")
+    if card.get("agn_evidence") or card.get("wise_agn"):
+        context.append("AGN/核区上下文")
+    rows.append("上下文：" + ("、".join(context) if context else "未见强先验提示"))
+    return rows
+
+
+def compact_feature_metrics(source_id: str) -> tuple[list[tuple[str, str]], list[str]]:
+    card = load_feature_cards().get(source_id, {})
+    if not card:
+        return [], []
+    quality_label = {
+        "A_completed_high": "A 高质量",
+        "B_completed_good": "B 可用",
+        "C_imputed_usable": "C 插补可用",
+        "D_low_quality": "D 低质量",
+    }.get(str(card.get("quality_tier") or ""), str(card.get("quality_tier") or "-"))
+    metrics = [
+        ("观测点", str(card.get("n_obs") or "-")),
+        ("红移 z", str(card.get("z") or "-")),
+        ("宿主距离", str(card.get("host_dlr") or "-")),
+        ("特征质量", quality_label),
+        ("完整度", str(card.get("feature_completeness") or "-")),
+        ("绝对星等", str(card.get("M_completed") or "-")),
+        ("15天衰减", str(card.get("dm15_completed") or "-")),
+        ("振幅", str(card.get("amplitude_completed") or "-")),
+        ("再亮计数", str(card.get("rebrightening_completed") or "0")),
+        ("峰值SNR", str(card.get("peak_snr") or "-")),
+    ]
+    context: list[str] = []
+    if card.get("gaia_is_stellar") or card.get("var_evidence"):
+        context.append("恒星/变源上下文")
+    if card.get("agn_evidence") or card.get("wise_agn"):
+        context.append("AGN/核区上下文")
+    return metrics, context
+
+
+def crop_plot_whitespace(image: Any, padding: int = 14) -> Any:
+    if ImageChops is None:
+        return image
+    bg = Image.new(image.mode, image.size, image.getpixel((0, 0)))
+    diff = ImageChops.difference(image, bg)
+    bbox = diff.getbbox()
+    if not bbox:
+        return image
+    left, top, right, bottom = bbox
+    left = max(left - padding, 0)
+    top = max(top - padding, 0)
+    right = min(right + padding, image.width)
+    bottom = min(bottom + padding, image.height)
+    # Avoid accidental over-cropping if the source image is already tight.
+    if (right - left) < image.width * 0.45 or (bottom - top) < image.height * 0.45:
+        return image
+    return image.crop((left, top, right, bottom))
+
+
+def fit_image(image: Any, max_size: tuple[int, int], max_upscale: float = 2.2) -> Any:
+    max_w, max_h = max_size
+    scale = min(max_w / image.width, max_h / image.height, max_upscale)
+    if scale <= 0:
+        return image
+    target = (max(1, int(image.width * scale)), max(1, int(image.height * scale)))
+    if target == image.size:
+        return image
+    return image.resize(target, Image.Resampling.LANCZOS)
+
+
+def build_review_image(source_id: str) -> bytes:
+    if Image is None or ImageDraw is None:
+        raise RuntimeError("Pillow is required to render review composite images")
+
+    scatter_path = image_file_for_source(source_id, "scatter")
+    gp_path = image_file_for_source(source_id, "gp")
+    main_path = scatter_path if scatter_path.exists() else gp_path
+    if not main_path.exists():
+        raise FileNotFoundError(f"source image not found: {source_id}")
+
+    main = crop_plot_whitespace(Image.open(main_path).convert("RGB"))
+
+    canvas_w, canvas_h = 1320, 620
+    margin = 20
+    card_w = 360
+    main_w = canvas_w - card_w - margin * 3
+    main_h = canvas_h - margin * 2
+
+    canvas = Image.new("RGB", (canvas_w, canvas_h), "#f8fafc")
+    draw = ImageDraw.Draw(canvas)
+    title_font = load_display_font(26, bold=True)
+    body_font = load_display_font(18)
+    small_font = load_display_font(15)
+    label_font = load_display_font(14)
+
+    main = fit_image(main, (main_w, main_h))
+    main_x = margin + (main_w - main.width) // 2
+    main_y = margin + (main_h - main.height) // 2
+    canvas.paste(main, (main_x, main_y))
+    draw.rounded_rectangle((main_x - 1, main_y - 1, main_x + main.width + 1, main_y + main.height + 1), radius=14, outline="#cbd5e1", width=2)
+
+    card_x = margin * 2 + main_w
+    draw.rounded_rectangle((card_x, margin, canvas_w - margin, canvas_h - margin), radius=20, fill="#ffffff", outline="#dbe3ee", width=2)
+    draw.text((card_x + 24, margin + 24), source_id, fill="#0f172a", font=title_font)
+    draw.text((card_x + 24, margin + 62), "辅助观察卡 · 只作旁证", fill="#64748b", font=small_font)
+
+    metrics, context_notes = compact_feature_metrics(source_id)
+    y = margin + 100
+    box_gap = 10
+    box_w = (card_w - 60 - box_gap) // 2
+    box_h = 58
+    for idx, (label, value) in enumerate(metrics[:10]):
+        col = idx % 2
+        row = idx // 2
+        x = card_x + 24 + col * (box_w + box_gap)
+        top = y + row * (box_h + box_gap)
+        draw.rounded_rectangle((x, top, x + box_w, top + box_h), radius=12, fill="#f8fafc", outline="#e2e8f0", width=1)
+        draw.text((x + 12, top + 8), label, fill="#64748b", font=label_font)
+        value_text = str(value)
+        if len(value_text) > 13:
+            value_text = value_text[:12] + "…"
+        draw.text((x + 12, top + 30), value_text, fill="#0f172a", font=body_font)
+
+    y = y + 5 * (box_h + box_gap) + 12
+    if context_notes:
+        draw.rounded_rectangle((card_x + 24, y, canvas_w - margin - 24, y + 72), radius=14, fill="#eef6ff", outline="#dbeafe", width=1)
+        draw.text((card_x + 38, y + 12), "先验线索", fill="#1e3a8a", font=label_font)
+        note_y = y + 34
+        for line in wrap_text(draw, "；".join(context_notes), small_font, card_w - 84)[:2]:
+            draw.text((card_x + 38, note_y), line, fill="#334155", font=small_font)
+            note_y += 22
+
+    output = io.BytesIO()
+    canvas.save(output, format="PNG", optimize=True)
+    return output.getvalue()
 
 
 def has_visual_evidence(reason: str) -> bool:
@@ -1600,7 +1898,12 @@ def line_score(row: dict[str, Any], first_coverage: bool) -> tuple[int, list[str
 def parse_submission_lines(text: str, claim: dict[str, Any] | None) -> list[dict[str, Any]]:
     lines = [line.strip() for line in str(text or "").splitlines() if line.strip()]
     rows: list[dict[str, Any]] = []
-    claim_items = batch_items(int(claim["batch_number"])) if claim else []
+    claim_items = [normalize_item(item) for item in (claim.get("items") or [])] if claim else []
+    if claim and not claim_items and claim.get("batch_number") is not None:
+        try:
+            claim_items = batch_items(int(claim["batch_number"]))
+        except (TypeError, ValueError):
+            claim_items = []
     by_key = manifest_items_by_key()
     md_pattern = re.compile(r"^!\[\]\((?P<url>[^)]+)\)\s*\|\s*(?P<rest>.+)$")
 
@@ -1822,6 +2125,14 @@ def submit(body: dict[str, Any]) -> dict[str, Any]:
 class RelayHandler(SimpleHTTPRequestHandler):
     server_version = "DataSampleRelay/1.0"
 
+    def safe_write(self, data: bytes) -> None:
+        try:
+            self.wfile.write(data)
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            # Browser screenshots and model clients may abandon image loads while
+            # scrolling. The request is harmless and should not pollute logs.
+            return
+
     def list_directory(self, path: str):  # type: ignore[override]
         self.write_json({"ok": False, "error": "directory listing is disabled"}, status=HTTPStatus.FORBIDDEN)
         return None
@@ -1834,6 +2145,24 @@ class RelayHandler(SimpleHTTPRequestHandler):
         if any(normalized.startswith(prefix) for prefix in PUBLIC_IMAGE_PREFIXES):
             return lower.endswith(PUBLIC_IMAGE_EXTENSIONS)
         return False
+
+    def do_HEAD(self) -> None:
+        parsed = urlparse(self.path)
+        if parsed.path.startswith("/all_sample_review/") and parsed.path.lower().endswith(".png"):
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "image/png")
+            self.send_header("Cache-Control", "public, max-age=86400")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        if not self.is_public_static_path(parsed.path):
+            self.send_response(HTTPStatus.FORBIDDEN)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-store, max-age=0")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        super().do_HEAD()
 
     def guess_type(self, path: str) -> str:
         content_type = super().guess_type(path)
@@ -1868,24 +2197,22 @@ class RelayHandler(SimpleHTTPRequestHandler):
             self.write_json(payload)
             return
         if parsed.path == "/api/submissions":
-            params = parse_qs(parsed.query)
-            limit = 200
-            if params.get("limit"):
-                try:
-                    limit = max(1, min(int(params["limit"][0]), 5000))
-                except ValueError:
-                    limit = 200
-            with state_lock:
-                state = load_state()
-                public_submissions = [item for item in state.get("submissions", []) if is_public_submission(item)]
-                submissions = [enrich_submission_for_public(item) for item in public_submissions[-limit:]]
-            self.write_json({"ok": True, "items": submissions, "total": len(public_submissions), "limit": limit})
+            self.write_json(
+                {
+                    "ok": False,
+                    "error": "submissions are reviewed in TopicLab Arcade branches; this data service does not expose a public submission feed",
+                },
+                status=HTTPStatus.GONE,
+            )
             return
         if parsed.path == "/api/leaderboard":
-            with state_lock:
-                state = load_state()
-                payload = public_leaderboard_payload(state)
-            self.write_json(payload)
+            self.write_json(
+                {
+                    "ok": False,
+                    "error": "leaderboards are maintained from TopicLab Arcade review results, not from this data service",
+                },
+                status=HTTPStatus.GONE,
+            )
             return
         if parsed.path == "/api/organizer/review":
             if not self.is_local_client():
@@ -1914,6 +2241,23 @@ class RelayHandler(SimpleHTTPRequestHandler):
                 payload = organizer_leaderboard_payload(state)
             self.write_json(payload)
             return
+        if parsed.path.startswith("/all_sample_review/") and parsed.path.lower().endswith(".png"):
+            source_id = review_source_id_from_path(parsed.path)
+            try:
+                data = build_review_image(source_id)
+            except FileNotFoundError:
+                self.write_json({"ok": False, "error": f"source image not found: {source_id}"}, status=HTTPStatus.NOT_FOUND)
+                return
+            except Exception as exc:
+                self.write_json({"ok": False, "error": f"review image render failed: {exc}"}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+                return
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "image/png")
+            self.send_header("Cache-Control", "public, max-age=86400")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.safe_write(data)
+            return
         if not self.is_public_static_path(parsed.path):
             self.write_json({"ok": False, "error": "not a public resource"}, status=HTTPStatus.FORBIDDEN)
             return
@@ -1933,7 +2277,13 @@ class RelayHandler(SimpleHTTPRequestHandler):
                 self.write_json(make_claim(body))
                 return
             if parsed.path == "/api/submit":
-                self.write_json(submit(body))
+                self.write_json(
+                    {
+                        "ok": False,
+                        "error": "submit in the TopicLab Arcade branch; this data service only assigns images",
+                    },
+                    status=HTTPStatus.GONE,
+                )
                 return
             self.write_json({"ok": False, "error": "unknown endpoint"}, status=HTTPStatus.NOT_FOUND)
         except Exception:  # Keep API clients from receiving Python internals.
@@ -1957,7 +2307,7 @@ class RelayHandler(SimpleHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store, max-age=0")
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
-        self.wfile.write(data)
+        self.safe_write(data)
 
     def public_base_url(self) -> str:
         explicit = os.environ.get("RELAY_PUBLIC_BASE_URL", "").strip().rstrip("/")
@@ -1968,7 +2318,11 @@ class RelayHandler(SimpleHTTPRequestHandler):
         return f"{proto}://{host}".rstrip("/")
 
     def public_image_url(self, value: Any) -> Any:
-        if not isinstance(value, str) or ("/all_sample_scatter/" not in value and "/all_sample_gp/" not in value):
+        if not isinstance(value, str) or (
+            "/all_sample_review/" not in value
+            and "/all_sample_scatter/" not in value
+            and "/all_sample_gp/" not in value
+        ):
             return value
         key = image_key(value)
         return f"{self.public_base_url()}{key}"
@@ -1977,7 +2331,7 @@ class RelayHandler(SimpleHTTPRequestHandler):
         if isinstance(value, dict):
             return {
                 key: self.public_image_url(item)
-                if key in {"image_url", "gp_image_url", "scatter_image_url"}
+                if key in {"image_url", "review_image_url", "gp_image_url", "scatter_image_url"}
                 else self.with_public_image_urls(item)
                 for key, item in value.items()
             }
@@ -1992,7 +2346,7 @@ class RelayHandler(SimpleHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store, max-age=0")
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
-        self.wfile.write(data)
+        self.safe_write(data)
 
     def is_local_client(self) -> bool:
         host = self.client_address[0] if self.client_address else ""

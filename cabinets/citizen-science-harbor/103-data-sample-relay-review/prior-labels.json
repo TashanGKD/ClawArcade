@@ -1,0 +1,3070 @@
+{
+  "schema_version": 2,
+  "description": "Organizer-side prior labels exported from DATA_600_Sample review products. Used only for deterministic reviewer cross-check scoring; participant prompt does not expose these labels.",
+  "focus_rendered": [
+    "AT2018ehi",
+    "AT2018fwh",
+    "AT2018hso",
+    "AT2018kzx",
+    "AT2018lrb",
+    "AT2018zy",
+    "AT2019fsw",
+    "AT2019lwj",
+    "AT2019sqf",
+    "AT2020aabu",
+    "AT2020dpt",
+    "AT2021gwr",
+    "AT2021va",
+    "AT2023eai",
+    "AT2023qbw",
+    "AT2024gb",
+    "SN2018dfa",
+    "SN2018dhp",
+    "SN2018gep",
+    "SN2019bjv",
+    "SN2019meh",
+    "SN2019mge",
+    "SN2019oyt",
+    "SN2019yvr",
+    "SN2020dya",
+    "SN2021can",
+    "SN2021hxv",
+    "SN2022erq",
+    "SN2022frq",
+    "SN2022lvm",
+    "SN2022ngb",
+    "SN2022qzx",
+    "SN2022uda",
+    "SN2022vxc",
+    "SN2022zxw",
+    "SN2023omf",
+    "SN2024fof"
+  ],
+  "priority_candidate": [
+    "AT2018aig",
+    "AT2018fua",
+    "AT2018fwh",
+    "AT2018hso",
+    "AT2018ifv",
+    "AT2018kzx",
+    "AT2018lrb",
+    "AT2018zy",
+    "AT2019fsw",
+    "AT2019lwj",
+    "AT2019meg",
+    "AT2019new",
+    "AT2019pev",
+    "AT2019qxi",
+    "AT2019sqe",
+    "AT2019sqf",
+    "AT2020aabu",
+    "AT2020aauv",
+    "AT2020abrr",
+    "AT2020aod",
+    "AT2020dpt",
+    "AT2020fir",
+    "AT2020pno",
+    "AT2020tg",
+    "AT2020ukr",
+    "AT2021fyq",
+    "AT2021jmb",
+    "AT2022fcb",
+    "AT2022wjd",
+    "AT2023eai",
+    "AT2023gmn",
+    "AT2023qbw",
+    "AT2024gba",
+    "SN2018amc",
+    "SN2018atq",
+    "SN2018bjo",
+    "SN2018dfa",
+    "SN2018dhp",
+    "SN2018fpx",
+    "SN2018gep",
+    "SN2019bjv",
+    "SN2019clp",
+    "SN2019cpo",
+    "SN2019meh",
+    "SN2019mge",
+    "SN2019oyt",
+    "SN2019pbm",
+    "SN2019wmr",
+    "SN2019yvr",
+    "SN2020dya",
+    "SN2020hem",
+    "SN2020hrw",
+    "SN2020nim",
+    "SN2020uhn",
+    "SN2020vws",
+    "SN2021bug",
+    "SN2021can",
+    "SN2021gci",
+    "SN2021hxv",
+    "SN2021lwz",
+    "SN2021mkr",
+    "SN2021nof",
+    "SN2021sto",
+    "SN2021tyw",
+    "SN2021zaa",
+    "SN2022actd",
+    "SN2022bdu",
+    "SN2022erq",
+    "SN2022frq",
+    "SN2022lvm",
+    "SN2022ngb",
+    "SN2022opm",
+    "SN2022qzx",
+    "SN2022uda",
+    "SN2022vxc",
+    "SN2022wcz",
+    "SN2022zxw",
+    "SN2023fwr",
+    "SN2023lgw",
+    "SN2023omf",
+    "SN2023twg",
+    "SN2024fof"
+  ],
+  "manual_sources": {
+    "AT2018lrb": {
+      "labels": [
+        "data_quality_first",
+        "C",
+        "manual_recheck",
+        "unknown_unknown_candidate",
+        "known_unknown_candidate",
+        "data_issue",
+        "keep",
+        "second_pass"
+      ],
+      "sources": [
+        "manual_visual_recheck",
+        "known_unknown_ranking",
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 5,
+      "tier": "C",
+      "cluster_name": "noise",
+      "visual_class": "unknown candidate with weak amplitude/context",
+      "priority_score": "6.669268153022965",
+      "anomaly_score_prior": "2.6665813486775454",
+      "scientific_role": "high-risk candidate pool",
+      "group_id": "L2_noise_m1",
+      "second_pass_confidence": "high",
+      "first_label": "data_issue",
+      "likely_pattern_cn": "随机游走 / 分季节切换",
+      "reviewed_group_ids": "L2_noise_m1",
+      "review_tags": "season_switch|stochastic",
+      "reason": "unknown-unknown 池中有一定异常性，但振幅/上下文较弱且 data_issue 明显。；数据质量优先排查；明显像随机游走加分季节切换，几乎就是噪声池入口样本的教科书案例。；明显像随机游走加分季节切换，几乎就是“噪声池入口样本”的教科书案例。；随机游走 / 分季节切换；Stochastic baseline with abrupt seasonal state change. || Stochastic baseline with abrupt seasonal state change.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "可作为质量问题如何进入异常池的反例。；当前不作为主科学候选。；视觉复核已标为数据风险；先查季节拼接、模板减法、采样窗口和 GP 过拟合。；优先排查季节断点与模板减法；优先排查季节断点、模板减法、参考星问题"
+    },
+    "AT2019fsw": {
+      "labels": [
+        "data_quality_first",
+        "C",
+        "manual_recheck",
+        "known_unknown_bridge",
+        "known_unknown_candidate",
+        "data_issue",
+        "keep",
+        "second_pass"
+      ],
+      "sources": [
+        "manual_visual_recheck",
+        "known_unknown_ranking",
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 5,
+      "tier": "C",
+      "cluster_name": "L2_C4",
+      "visual_class": "feature outlier with data-quality flag",
+      "priority_score": "10.707464042721902",
+      "anomaly_score_prior": "6.871806338729234",
+      "scientific_role": "known-unknown bridge",
+      "group_id": "L3_L2_C4_LDS_C-1",
+      "second_pass_confidence": "high",
+      "first_label": "data_issue",
+      "likely_pattern_cn": "早期事件 + 杂乱尾部",
+      "reviewed_group_ids": "L3_L2_C4_LDS_C-1",
+      "review_tags": "early_peak_jitter_tail|noise_like_leaf",
+      "reason": "特征上像快速桥接候选，但已有 data_issue 标记；先做数据质量核查。；数据质量优先排查；早期事件后很快转入杂乱尾部，像是边缘截断或采样不足导致的高风险对象。；早期事件后很快转入杂乱尾部，像是边缘截断或采样不足导致的高风险对象。；早期事件 + 杂乱尾部；Early peak then jittery quasi-flat tail. || Early peak then jittery quasi-flat tail.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "如果质量通过，衰减和振幅有科学价值。；当前不进入主科学结论。；视觉复核已标为数据风险；先查季节拼接、模板减法、采样窗口和 GP 过拟合。；优先核查边缘采样、季节交界和 GP 过拟合"
+    },
+    "AT2019sqf": {
+      "labels": [
+        "science_second_low_visual_evidence",
+        "B",
+        "manual_recheck",
+        "known_unknown_bridge",
+        "known_unknown_candidate",
+        "typical",
+        "keep",
+        "second_pass"
+      ],
+      "sources": [
+        "manual_visual_recheck",
+        "known_unknown_ranking",
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 5,
+      "tier": "B",
+      "cluster_name": "L2_C4",
+      "visual_class": "feature-selected but query-lightcurve weak",
+      "priority_score": "10.543314542710366",
+      "anomaly_score_prior": "7.024754923537675",
+      "scientific_role": "known-unknown bridge",
+      "group_id": "L3_L2_C4_LDS_C4",
+      "second_pass_confidence": "high",
+      "first_label": "typical",
+      "likely_pattern_cn": "长红平台",
+      "reviewed_group_ids": "L3_L2_C4_LDS_C4",
+      "review_tags": "faint_blue_track|long_red_plateau",
+      "reason": "旧候选页里主查询光变缺失/很弱，更多是特征空间和锚点相似性推上来的对象。；可保留的 known-unknown bridge；长红平台是这个叶子的标准脸谱，视觉上最能代表 red plateau 风格。；长红平台是这个叶子的标准脸谱，视觉上最能代表 red plateau 风格。；长红平台；Very long red plateau with weaker blue track. || Very long red plateau with weaker blue track.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "若特征可信，绝对星等和15天衰减都很突出。；不宜作为展示主例，除非补齐原始光变和质量检查。；方向明确但峰时刻或质量指标较弱；适合进入备选和补充图。；适合做典型模板"
+    },
+    "AT2020gd": {
+      "labels": [
+        "science_second_unknown_unknown_low_context",
+        "B",
+        "manual_recheck",
+        "unknown_unknown_candidate",
+        "known_unknown_candidate"
+      ],
+      "sources": [
+        "manual_visual_recheck",
+        "known_unknown_ranking"
+      ],
+      "priority": 5,
+      "tier": "B",
+      "cluster_name": "noise",
+      "visual_class": "rapid spike but low context",
+      "priority_score": "7.484358547724449",
+      "anomaly_score_prior": "3.605142591098467",
+      "scientific_role": "high-risk candidate pool",
+      "reason": "候选页显示尖峰很明显，但查询光变上下文不足，像是需要源级图像复核的 unknown-unknown。；备选 unknown-unknown 快速/剥离方向候选",
+      "check": "快速峰形和振幅突出。；缺少连续上下文，不能单独支撑新物理叙事。；方向有价值，但质量或视觉风险不够干净。"
+    },
+    "AT2020ilg": {
+      "labels": [
+        "contamination_control_bridge_boundary",
+        "C",
+        "manual_recheck",
+        "high_risk_contaminant",
+        "known_unknown_candidate"
+      ],
+      "sources": [
+        "manual_visual_recheck",
+        "known_unknown_ranking"
+      ],
+      "priority": 5,
+      "tier": "C",
+      "cluster_name": "L2_C4",
+      "visual_class": "bridge-like features with contamination risk",
+      "priority_score": "4.606394094675119",
+      "anomaly_score_prior": "2.7987390409205783",
+      "scientific_role": "known-unknown bridge",
+      "reason": "特征空间靠近桥接区域，但峰值误差和慢变/污染风险较高。；污染/核活动优先排查",
+      "check": "它说明 L2_C4 桥接区也会吸入低质量或污染对象。；用于边界说明，不宜作为主例。；不要作为新物理类候选；先验证 AGN/TDE/QSO/模板减法风险。"
+    },
+    "AT2020kri": {
+      "labels": [
+        "physics_contamination_parallel",
+        "B",
+        "manual_recheck",
+        "unknown_unknown_candidate",
+        "known_unknown_candidate"
+      ],
+      "sources": [
+        "manual_visual_recheck",
+        "known_unknown_ranking"
+      ],
+      "priority": 5,
+      "tier": "B",
+      "cluster_name": "L2_C0",
+      "visual_class": "smooth luminous nuclear/TDE-like transient",
+      "priority_score": "7.332663963784308",
+      "anomaly_score_prior": "2.77559259610529",
+      "scientific_role": "high-risk anomaly / contaminant-prone",
+      "reason": "光变很平滑、很亮，像 TDE/AGN/核区瞬变边界；科学价值高，但不应先按新型超新星讲。；物理极端与核污染并行复核",
+      "check": "高光度、慢演化、平滑峰形构成独立的污染/物理边界样本。；必须做核区偏移、WISE/AGN 和 TDE 文献对照。；高亮或近核方向，可能是稀有暂现源，也可能是 TDE/AGN/宿主核区污染。"
+    },
+    "AT2020uyj": {
+      "labels": [
+        "physics_contamination_parallel",
+        "B",
+        "manual_recheck",
+        "unknown_unknown_candidate",
+        "known_unknown_candidate"
+      ],
+      "sources": [
+        "manual_visual_recheck",
+        "known_unknown_ranking"
+      ],
+      "priority": 5,
+      "tier": "B",
+      "cluster_name": "L2_C0",
+      "visual_class": "smooth high-luminosity contaminant-boundary transient",
+      "priority_score": "7.027793465366989",
+      "anomaly_score_prior": "2.046094574876341",
+      "scientific_role": "high-risk anomaly / contaminant-prone",
+      "reason": "与 AT2020kri 类似，平滑高光度变化更像核区/TDE/AGN 边界，不适合直接放入 SN 新类候选。；物理极端与核污染并行复核",
+      "check": "极端高光度和慢变形态值得作为污染边界样本。；需优先核查宿主中心距离和历史活动。；高亮或近核方向，可能是稀有暂现源，也可能是 TDE/AGN/宿主核区污染。"
+    },
+    "AT2021afpo": {
+      "labels": [
+        "contamination_control_AGN",
+        "C",
+        "manual_recheck",
+        "high_risk_contaminant",
+        "known_unknown_candidate"
+      ],
+      "sources": [
+        "manual_visual_recheck",
+        "known_unknown_ranking"
+      ],
+      "priority": 5,
+      "type": "AGN",
+      "tier": "C",
+      "cluster_name": "L2_C0",
+      "visual_class": "known AGN control",
+      "priority_score": "4.827466180210816",
+      "anomaly_score_prior": "2.9300318966752896",
+      "scientific_role": "high-risk anomaly / contaminant-prone",
+      "reason": "AGN 标注对象，主要用途是训练/解释污染边界。；污染/核活动优先排查",
+      "check": "用于说明高光度慢变区域的污染机制。；不作为主科学候选。；不要作为新物理类候选；先验证 AGN/TDE/QSO/模板减法风险。"
+    },
+    "AT2021ghb": {
+      "labels": [
+        "contamination_control",
+        "C",
+        "manual_recheck",
+        "high_risk_contaminant",
+        "known_unknown_candidate"
+      ],
+      "sources": [
+        "manual_visual_recheck",
+        "known_unknown_ranking"
+      ],
+      "priority": 5,
+      "tier": "C",
+      "cluster_name": "L2_C0",
+      "visual_class": "extreme luminosity control",
+      "priority_score": "6.637437840142702",
+      "anomaly_score_prior": "4.748666694743435",
+      "scientific_role": "high-risk anomaly / contaminant-prone",
+      "reason": "绝对星等极端，优先视为污染/核区/红移或宿主关联风险控制对象。；污染/核活动优先排查",
+      "check": "极端亮度本身需要解释，但更可能先是质量/污染问题。；不进入主科学候选，作为排雷样本。；不要作为新物理类候选；先验证 AGN/TDE/QSO/模板减法风险。"
+    },
+    "AT2021jmb": {
+      "labels": [
+        "contamination_control_AGN",
+        "C",
+        "manual_recheck",
+        "high_risk_contaminant",
+        "known_unknown_candidate",
+        "interesting",
+        "keep",
+        "second_pass"
+      ],
+      "sources": [
+        "manual_visual_recheck",
+        "known_unknown_ranking",
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 5,
+      "type": "AGN",
+      "tier": "C",
+      "cluster_name": "L2_C0",
+      "visual_class": "known AGN control",
+      "priority_score": "6.162405829728671",
+      "anomaly_score_prior": "4.110335329380624",
+      "scientific_role": "high-risk anomaly / contaminant-prone",
+      "group_id": "L2_C0",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "TNS/类型信息已指向 AGN，适合作为高风险污染参照。；污染/核活动优先排查；长时间维持高亮箱体状态，末端还有明显结构变化，属于这个簇里很有辨识度的异常成员。；过去进入重点候选短表",
+      "check": "能帮助界定 L2_C0 高光度池里哪些不是 SN 物理。；用于污染边界，不作为新瞬变候选。；不要作为新物理类候选；先验证 AGN/TDE/QSO/模板减法风险。；检查箱体是否由少数高点支撑"
+    },
+    "AT2022vhb": {
+      "labels": [
+        "contamination_control_AGN",
+        "C",
+        "manual_recheck",
+        "high_risk_contaminant",
+        "known_unknown_candidate"
+      ],
+      "sources": [
+        "manual_visual_recheck",
+        "known_unknown_ranking"
+      ],
+      "priority": 5,
+      "type": "AGN",
+      "tier": "C",
+      "cluster_name": "L2_C0",
+      "visual_class": "AGN/high-luminosity control",
+      "priority_score": "4.523110406791851",
+      "anomaly_score_prior": "2.3494032933563886",
+      "scientific_role": "high-risk anomaly / contaminant-prone",
+      "reason": "AGN 标注且高光度慢变，作为 TDE/AGN 边界参照。；污染/核活动优先排查",
+      "check": "帮助把高光度慢变池和快速 SN 候选分开。；不作为主科学候选。；不要作为新物理类候选；先验证 AGN/TDE/QSO/模板减法风险。"
+    },
+    "AT2023zgc": {
+      "labels": [
+        "contamination_control_extreme_sampling",
+        "C",
+        "manual_recheck",
+        "high_risk_contaminant",
+        "known_unknown_candidate"
+      ],
+      "sources": [
+        "manual_visual_recheck",
+        "known_unknown_ranking"
+      ],
+      "priority": 5,
+      "tier": "C",
+      "cluster_name": "L2_C0",
+      "visual_class": "extreme luminous densely sampled boundary",
+      "priority_score": "4.161472893182911",
+      "anomaly_score_prior": "3.036472893182911",
+      "scientific_role": "high-risk anomaly / contaminant-prone",
+      "reason": "点数多但峰值误差高、绝对星等极端，优先作为污染/质量边界。；污染/核活动优先排查",
+      "check": "密集采样可用于诊断高光度污染池。；需核对红移、宿主中心和历史变源。；不要作为新物理类候选；先验证 AGN/TDE/QSO/模板减法风险。"
+    },
+    "SN2018adu": {
+      "labels": [
+        "science_second_unknown_unknown",
+        "B",
+        "manual_recheck",
+        "unknown_unknown_candidate",
+        "known_unknown_candidate"
+      ],
+      "sources": [
+        "manual_visual_recheck",
+        "known_unknown_ranking"
+      ],
+      "priority": 5,
+      "type": "SN II",
+      "tier": "B",
+      "cluster_name": "noise",
+      "visual_class": "rapid candidate in noisy pool",
+      "priority_score": "7.74587963717528",
+      "anomaly_score_prior": "3.5491605991765915",
+      "scientific_role": "high-risk candidate pool",
+      "reason": "局部有较快变亮/变暗结构，但噪声池背景较重；可作为 unknown-unknown 第二梯队。；备选 unknown-unknown 快速/剥离方向候选",
+      "check": "振幅和快速演化指标支持其不是普通 SN II 平台。；质量/采样检查优先于物理解释。；方向有价值，但质量或视觉风险不够干净。"
+    },
+    "SN2018eem": {
+      "labels": [
+        "physics_contamination_parallel_or_Hrich",
+        "B",
+        "manual_recheck",
+        "unknown_unknown_candidate",
+        "known_unknown_candidate"
+      ],
+      "sources": [
+        "manual_visual_recheck",
+        "known_unknown_ranking"
+      ],
+      "priority": 5,
+      "type": "SN II",
+      "tier": "B",
+      "cluster_name": "noise",
+      "visual_class": "mixed H-rich / nuclear-contaminant boundary",
+      "priority_score": "6.757511053099496",
+      "anomaly_score_prior": "0.840023926202404",
+      "scientific_role": "high-risk candidate pool",
+      "reason": "比 AT2020kri/uyj 更像 H-rich 或普通瞬变混合边界，但仍有核区/TDE-like 检查必要。；物理极端与核污染并行复核",
+      "check": "峰形和长期基线不完全普通，适合作为边界反例。；目前不作为主 unknown-unknown。；高亮或近核方向，可能是稀有暂现源，也可能是 TDE/AGN/宿主核区污染。"
+    },
+    "SN2018gep": {
+      "labels": [
+        "science_first_core_known_unknown",
+        "A",
+        "manual_recheck",
+        "known_unknown_bridge",
+        "known_unknown_candidate",
+        "bridge",
+        "keep",
+        "second_pass"
+      ],
+      "sources": [
+        "manual_visual_recheck",
+        "known_unknown_ranking",
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 5,
+      "type": "SN Ic-BL",
+      "tier": "A",
+      "cluster_name": "L2_C4",
+      "visual_class": "fast luminous stripped-envelope bridge anchor",
+      "priority_score": "13.340046305059468",
+      "anomaly_score_prior": "9.258191269848044",
+      "scientific_role": "known-unknown bridge",
+      "group_id": "L3_L2_C4_LDS_C2",
+      "second_pass_confidence": "high",
+      "first_label": "bridge",
+      "likely_pattern_cn": "anchor 样快亮尖峰",
+      "reviewed_group_ids": "L3_L2_C4_LDS_C2",
+      "review_tags": "anchor_like_spike|fast_luminous",
+      "reason": "视觉上是最强的“超过有趣”候选：r/g 同步出现非常陡的明亮峰，峰后快速衰减，基线相对干净；它不是单纯离群，而是能把宽线 Ic/FBOT/高光度快速演化方向连接起来的桥接锚点。；优先物理解读的 known-unknown bridge；这是最重要的 anchor-like 快亮尖峰对象，视觉辨识度极高，也是这条主线最值得保留的 bridge 源。；这是最重要的 anchor-like 快亮尖峰对象，视觉辨识度极高，也是这条主线最值得保留的 bridge 源。；anchor 样快亮尖峰；Anchor-like singular fast luminous spike. || Anchor-like singular fast luminous spike.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "亮度极端、15天衰减快、振幅大、采样密集，且形态与已知快速 stripped/engine-like 事件相符。；需要确认主星系/核区污染和谱分类细节，但作为主科学候选优先级最高。；已知光谱标签存在，但落在剥离包层/超亮/快速演化桥接区；适合做论文个例。；后续主线汇报里应优先展示"
+    },
+    "SN2018gjx": {
+      "labels": [
+        "science_first_core_known_unknown",
+        "A",
+        "manual_recheck",
+        "known_unknown_bridge",
+        "known_unknown_candidate"
+      ],
+      "sources": [
+        "manual_visual_recheck",
+        "known_unknown_ranking"
+      ],
+      "priority": 5,
+      "type": "SN IIb",
+      "tier": "A",
+      "cluster_name": "L2_C4",
+      "visual_class": "clean stripped-envelope fast decline bridge",
+      "priority_score": "11.71345037060092",
+      "anomaly_score_prior": "6.941242057954073",
+      "scientific_role": "known-unknown bridge",
+      "reason": "视觉上非常干净：峰后快速、连续下降，形态接近 stripped-envelope / IIb 方向，是比“有趣”更强的物理桥接候选。；优先物理解读的 known-unknown bridge",
+      "check": "峰定位可靠、振幅大、衰减形态清楚，且 TNS 类型本身支持 stripped-envelope 解释。；后续主要核对绝对星等/距离和是否存在早期 shock cooling/相互作用分量。；已知光谱标签存在，但落在剥离包层/超亮/快速演化桥接区；适合做论文个例。"
+    },
+    "SN2019cmy": {
+      "labels": [
+        "science_first_known_unknown",
+        "A",
+        "manual_recheck",
+        "known_unknown_bridge",
+        "known_unknown_candidate"
+      ],
+      "sources": [
+        "manual_visual_recheck",
+        "known_unknown_ranking"
+      ],
+      "priority": 5,
+      "type": "SN II",
+      "tier": "A",
+      "cluster_name": "L2_C4",
+      "visual_class": "structured fast post-peak decline",
+      "priority_score": "11.013374036795136",
+      "anomaly_score_prior": "6.978394621203704",
+      "scientific_role": "known-unknown bridge",
+      "reason": "峰后下降结构清楚，r/g 形态一致，属于 L2_C4 快速衰减桥接候选；视觉上略弱于 SN2018gep/SN2018gjx，但仍值得进入主表。；优先物理解读的 known-unknown bridge",
+      "check": "衰减斜率、15天衰减和振幅同时突出，不是孤立的噪声点。；需要确认 SN II 标注下是否有相互作用或 stripped/peculiar 成分。；已知光谱标签存在，但落在剥离包层/超亮/快速演化桥接区；适合做论文个例。"
+    },
+    "SN2021mqo": {
+      "labels": [
+        "science_first_known_unknown_caveated",
+        "A",
+        "manual_recheck",
+        "known_unknown_bridge",
+        "known_unknown_candidate"
+      ],
+      "sources": [
+        "manual_visual_recheck",
+        "known_unknown_ranking"
+      ],
+      "priority": 5,
+      "type": "SN II",
+      "tier": "A",
+      "cluster_name": "L2_C4",
+      "visual_class": "narrow fast peak on sparse baseline",
+      "priority_score": "12.74958492756046",
+      "anomaly_score_prior": "8.069289736938101",
+      "scientific_role": "known-unknown bridge",
+      "reason": "有清楚的窄而快的峰，和 L2_C4 快速衰减桥接方向一致；但光变覆盖比 SN2018gep/SN2018gjx 稀疏，视觉证据更依赖模型/特征。；优先物理解读的 known-unknown bridge",
+      "check": "15天衰减快且峰值定位稳定，和 stripped/exotic 方向的锚点接近。；需要人工确认峰前/峰后是否被漏采样夸大。；已知光谱标签存在，但落在剥离包层/超亮/快速演化桥接区；适合做论文个例。"
+    },
+    "SN2021tcv": {
+      "labels": [
+        "science_second_known_unknown",
+        "B",
+        "manual_recheck",
+        "known_unknown_bridge",
+        "known_unknown_candidate"
+      ],
+      "sources": [
+        "manual_visual_recheck",
+        "known_unknown_ranking"
+      ],
+      "priority": 5,
+      "type": "SN II",
+      "tier": "B",
+      "cluster_name": "L2_C4",
+      "visual_class": "fast candidate with sparse support",
+      "priority_score": "12.640930284921131",
+      "anomaly_score_prior": "8.988314239746792",
+      "scientific_role": "known-unknown bridge",
+      "reason": "局部峰支持快速候选，但周围点稀疏、形态连续性较弱；目前应放在第二梯队复核，而不是主锚点。；可保留的 known-unknown bridge",
+      "check": "快速衰减和近邻锚点支持科学方向。；采样不足导致误判风险较高。；方向明确但峰时刻或质量指标较弱；适合进入备选和补充图。"
+    },
+    "SN2022pjl": {
+      "labels": [
+        "science_first_known_unknown_caveated",
+        "A",
+        "manual_recheck",
+        "known_unknown_bridge",
+        "known_unknown_candidate"
+      ],
+      "sources": [
+        "manual_visual_recheck",
+        "known_unknown_ranking"
+      ],
+      "priority": 5,
+      "type": "SN II",
+      "tier": "A",
+      "cluster_name": "L2_C4",
+      "visual_class": "large-amplitude late event candidate",
+      "priority_score": "12.340513680409613",
+      "anomaly_score_prior": "7.423485115932241",
+      "scientific_role": "known-unknown bridge",
+      "reason": "局部事件很亮且振幅大，视觉上像一个嵌在长基线里的快速峰；但峰前长时间跨度和采样窗口使解释不如核心锚点干净。；优先物理解读的 known-unknown bridge",
+      "check": "振幅和衰减指标都突出，符合快速演化/桥接候选。；要重点核对是否为独立瞬变、宿主/背景或季节性采样造成的峰形。；已知光谱标签存在，但落在剥离包层/超亮/快速演化桥接区；适合做论文个例。"
+    },
+    "SN2022wcz": {
+      "labels": [
+        "science_first_core_unknown_unknown",
+        "A",
+        "manual_recheck",
+        "unknown_unknown_candidate",
+        "known_unknown_candidate",
+        "interesting",
+        "keep",
+        "second_pass"
+      ],
+      "sources": [
+        "manual_visual_recheck",
+        "known_unknown_ranking",
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 5,
+      "type": "SN II",
+      "tier": "A",
+      "cluster_name": "noise",
+      "visual_class": "terminal spike on structured/noisy baseline",
+      "priority_score": "8.752105703040444",
+      "anomaly_score_prior": "4.093565444159223",
+      "scientific_role": "high-risk candidate pool",
+      "group_id": "L2_noise_m1",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "这是 unknown-unknown 里最值得单独看的对象：长期基线有结构/噪声，但末端出现很强、很集中的峰，和普通平台型 SN II 不同。；优先复核的 unknown-unknown 快速/剥离方向候选；箱体式起伏和末端尖峰并存，虽然在噪声池里，但视觉辨识度很高。；过去进入重点候选短表",
+      "check": "视觉形态不能只用“有趣”概括；它可能是快速相互作用事件，也可能暴露了数据处理/宿主背景问题。；必须核对图像差分、宿主位置和是否为同一物理源的真实峰。；不落主群但 GP 支持尚可，且靠近快速剥离或 FBOT/Icn-like 锚点。；检查是否存在周期风险或窗口效应"
+    },
+    "SN2023nlo": {
+      "labels": [
+        "science_second_Hrich_interaction_candidate",
+        "B",
+        "manual_recheck",
+        "unknown_unknown_candidate",
+        "known_unknown_candidate"
+      ],
+      "sources": [
+        "manual_visual_recheck",
+        "known_unknown_ranking"
+      ],
+      "priority": 5,
+      "type": "SN II",
+      "tier": "B",
+      "cluster_name": "noise",
+      "visual_class": "periodic/structured baseline plus terminal event",
+      "priority_score": "6.991349290719927",
+      "anomaly_score_prior": "1.0855553889855416",
+      "scientific_role": "high-risk candidate pool",
+      "reason": "视觉上有长期结构和末端事件，较像 H-rich interaction / IIn 连续谱或污染边界对象。；富氢相互作用 unknown-unknown 候选",
+      "check": "它有明确的长期结构，不只是单点异常。；需排除周期/宿主/AGN 类污染，再谈物理。；不落主群但靠近 II/IIn 连续区；适合与 C3 interaction 群对照。"
+    },
+    "AT2018aig": {
+      "labels": [
+        "data_issue",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C7",
+      "second_pass_confidence": "high",
+      "first_label": "data_issue",
+      "reason": "红波段长期维持高平顶而蓝波段整体偏低，两个波段分离得过于稳定，视觉上更像核活动或背景处理问题，不适合当作正常典型。；过去进入重点候选短表",
+      "check": "优先检查核附近污染、宿主减法残差，以及不同观测季的基线是否一致"
+    },
+    "AT2018fua": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C8_LDS_C2",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "整体是衰减主线，但一路伴着细碎起伏，视觉上很有辨识度。；过去进入重点候选短表",
+      "check": "检查起伏是否与噪声或采样相关"
+    },
+    "AT2018fwh": {
+      "labels": [
+        "data_issue",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "data_issue_watch",
+        "data issue",
+        "review_memory",
+        "focus_rendered"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C4_LDS_C3",
+      "second_pass_confidence": "high",
+      "first_label": "data_issue",
+      "likely_pattern_cn": "边缘效应 + 过长平尾",
+      "reviewed_group_ids": "L3_L2_C4_LDS_C3",
+      "review_tags": "edge_behavior|long_flat_blue",
+      "reason": "边缘效应明显，异常长平尾很可疑，数据风险高于物理解释价值。；边缘效应明显，异常长平尾很可疑，数据风险高于物理解释价值。；边缘效应 + 过长平尾；Odd edge behavior and long flat blue state. || Odd edge behavior and long flat blue state.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "优先查边界截断和季节尾端拟合"
+    },
+    "AT2018hso": {
+      "labels": [
+        "typical",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "worth_manual_review",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C8_LDS_C0",
+      "second_pass_confidence": "high",
+      "first_label": "typical",
+      "likely_pattern_cn": "长时程结构化衰减",
+      "reviewed_group_ids": "L3_L2_C8_LDS_C0",
+      "review_tags": "long_structured_decline|red_gap_adjacent",
+      "reason": "长时程结构化衰减很有教学意义，虽然不一定最异常，但非常适合当这一叶的人读典型样板。；长时程结构化衰减很有教学意义，虽然不一定最异常，但非常适合当这一叶的人读典型样板。；长时程结构化衰减；Longest and most structured decline in the row.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "适合作为解释该叶子的辅助样例"
+    },
+    "AT2018ifv": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C8_LDS_C3",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "虽然整体是宽衰减，但内部还混着明显局部结构，属于这一叶里容易记住的对象。；过去进入重点候选短表",
+      "check": "检查局部结构是否同时出现在两波段"
+    },
+    "AT2018kzx": {
+      "labels": [
+        "data_issue",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "worth_manual_review",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C4_LDS_C1",
+      "second_pass_confidence": "medium",
+      "first_label": "data_issue",
+      "likely_pattern_cn": "平台主体 + 高噪声尾",
+      "reviewed_group_ids": "L3_L2_C4_LDS_C1",
+      "review_tags": "flat_state_noisy_tail|late_excursions",
+      "reason": "整体像正常平台，但尾部噪声明显增大，更像观测质量下降或末端数据退化带来的疑点。；整体像正常平台，但尾部噪声明显增大，更像观测质量下降或末端数据退化带来的疑点。；平台主体 + 高噪声尾；Flat state with noisy late excursions.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "检查尾部是否由观测质量下降引起"
+    },
+    "AT2018zy": {
+      "labels": [
+        "bridge",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "bridge_candidate",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C8_LDS_C1",
+      "second_pass_confidence": "high",
+      "first_label": "bridge",
+      "likely_pattern_cn": "干净的 decline-to-plateau bridge",
+      "reviewed_group_ids": "L3_L2_C8_LDS_C1",
+      "review_tags": "clean_decline_then_plateau|readable_bridge",
+      "reason": "这是最干净的 decline-to-plateau bridge 之一，形态简洁、教学意义强。；这是最干净的 decline-to-plateau bridge 之一，形态简洁、教学意义强。；干净的 decline-to-plateau bridge；Readable decline then plateau evolution. || Readable decline then plateau evolution.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "可作为 human-readable bridge 模板"
+    },
+    "AT2019meg": {
+      "labels": [
+        "data_issue",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C7",
+      "second_pass_confidence": "high",
+      "first_label": "data_issue",
+      "reason": "先快速冲高再以过于规整的方式回落到平直尾部，整体结构化太强，更像周期性或非瞬变背景混入。；过去进入重点候选短表",
+      "check": "检查是否存在周期性重复、季节性窗口效应或恒星型变量污染"
+    },
+    "AT2019new": {
+      "labels": [
+        "data_issue",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C2",
+      "second_pass_confidence": "medium",
+      "first_label": "data_issue",
+      "reason": "高噪声和不规则起伏明显，峰谷切换不够自然，更适合作为数据或核区高风险成员对待。；过去进入重点候选短表",
+      "check": "优先检查核区污染和观测质量"
+    },
+    "AT2019pev": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C3",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "高而窄的主峰之后接着明显长尾，亮峰和余辉都很完整，是这簇里最容易吸引注意的强事件之一。；过去进入重点候选短表",
+      "check": "优先检查主峰前后采样是否连续，并和更平滑的平台型成员对照"
+    },
+    "AT2019qxi": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C3",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "长期维持在较高亮度并带结构起伏，像是持续交互驱动下的平台型成员，interaction 感非常强。；过去进入重点候选短表",
+      "check": "重点看平台长度与波段间同步性，判断是否为持续能量注入"
+    },
+    "AT2019sqe": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C1",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "早期明亮尖峰之后快速回落，和周围更平的平台成员相比非常抓眼。；过去进入重点候选短表",
+      "check": "检查峰顶附近采样连续性"
+    },
+    "AT2020aabu": {
+      "labels": [
+        "typical",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "physically_typical",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C3",
+      "second_pass_confidence": "high",
+      "first_label": "typical",
+      "likely_pattern_cn": "长平台 / 持续颜色偏移",
+      "reviewed_group_ids": "L2_C3",
+      "review_tags": "persistent_color_offset|plateau_like",
+      "reason": "长平台加明显的颜色偏移是这个 interaction/bridge 簇最容易读懂的脸谱之一，典型性非常高。；长平台加明显的颜色偏移是这个 interaction/bridge 簇最容易读懂的脸谱之一，典型性非常高。；长平台 / 持续颜色偏移；Long-lasting red-blue offset and plateau-like evolution. || Long-lasting red-blue offset and plateau-like evolution.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "可作为该簇典型模板；后续重点看平台长度与颜色稳定性"
+    },
+    "AT2020aauv": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C6",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "前期快速衰减后没有安静下来，而是维持在较高亮度的平台上，属于这个活跃簇里很容易记住的一类对象。；过去进入重点候选短表",
+      "check": "检查平台是否双波段同步维持，并与更纯 flare 型成员对照"
+    },
+    "AT2020abrr": {
+      "labels": [
+        "interesting",
+        "remove",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C8_LDS_C0",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "在高背景结构上又长出再亮峰，辨识度很高，值得保留。；过去进入重点候选短表",
+      "check": "检查再亮峰是否与底噪状态变化相关"
+    },
+    "AT2020aod": {
+      "labels": [
+        "data_issue",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C7",
+      "second_pass_confidence": "high",
+      "first_label": "data_issue",
+      "reason": "整条曲线被切成多个长平台块并伴随不自然回返，GP 形状有明显箱体感，数据或拟合风险高于物理解释价值。；过去进入重点候选短表",
+      "check": "优先核查季节边界、稀疏采样区和 GP 是否被少量点强行拉平"
+    },
+    "AT2020dpt": {
+      "labels": [
+        "typical",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "physically_typical",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C8_LDS_C-1",
+      "second_pass_confidence": "medium",
+      "first_label": "typical",
+      "likely_pattern_cn": "稀疏支撑的波状平台",
+      "reviewed_group_ids": "L3_L2_C8_LDS_C-1",
+      "review_tags": "sparse_blue|wavy_red_plateau",
+      "reason": "样本极小，这个对象的稀疏支撑下波状平台已经足够代表这个 tiny leaf。；样本极小，这个对象的稀疏支撑下波状平台已经足够代表这个 tiny leaf。；稀疏支撑的波状平台；Wavy red plateau with sparse blue support. || Wavy red plateau with sparse blue support.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "作为小叶代表即可，无需过度解读"
+    },
+    "AT2020pno": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C3",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "likely_pattern_cn": "尖峰后拖尾",
+      "reason": "先出现明显尖峰，随后留下较长拖尾，视觉上很抓人，适合作为该簇的异常样本之一。；先出现明显尖峰，随后留下较长拖尾，视觉上很抓人，适合作为该簇的异常样本之一。；尖峰后拖尾；过去进入重点候选短表",
+      "check": "检查拖尾是否由稀疏末端点放大，并与 SN2018dhp 这类规整成员对比"
+    },
+    "AT2020tg": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C3",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "一个很干净的早期亮峰后接长尾，形态完整，不像纯噪声抖动，更像有真实物理结构的大振幅事件。；过去进入重点候选短表",
+      "check": "保留作强事件模板，并检查尾部是否随时间变红"
+    },
+    "AT2020ukr": {
+      "labels": [
+        "interesting",
+        "remove",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C3",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "宽主峰之后缓慢回落，整体更平滑，适合代表这簇里“大振幅但不尖锐”的一支。；过去进入重点候选短表",
+      "check": "与 AT2019pev 这类更尖的对象对照，比较峰宽和回落时标"
+    },
+    "AT2021fyq": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C4_LDS_C5",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "平顶背景之上仍保持结构性起伏，属于这个叶子里更活跃的一支。；过去进入重点候选短表",
+      "check": "核查起伏是否重复出现"
+    },
+    "AT2022fcb": {
+      "labels": [
+        "data_issue",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C2",
+      "second_pass_confidence": "medium",
+      "first_label": "data_issue",
+      "reason": "高背景上叠加局部起伏，视觉上更像核区活动或复杂系统误差，不宜直接当正常物理成员解释。；过去进入重点候选短表",
+      "check": "检查宿主中心偏移和历史变动"
+    },
+    "AT2022wjd": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C4_LDS_C1",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "虽然噪声更高，但平台块和状态切换依然清晰，辨识度足够高。；过去进入重点候选短表",
+      "check": "检查平台块是否受少数高点影响"
+    },
+    "AT2023eai": {
+      "labels": [
+        "data_issue",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "worth_manual_review",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C4_LDS_C3",
+      "second_pass_confidence": "medium",
+      "first_label": "data_issue",
+      "likely_pattern_cn": "尖峰 + 长红尾",
+      "reviewed_group_ids": "L3_L2_C4_LDS_C3",
+      "review_tags": "color_transition|sharp_peak_red_tail",
+      "reason": "尖锐峰之后挂着很长的红尾，边缘行为明显，尾部更像需要警惕的数据或拟合风险。；尖锐峰之后挂着很长的红尾，边缘行为明显，尾部更像需要警惕的数据或拟合风险。；尖峰 + 长红尾；Sharp peak then red-dominated late structure.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "核查尾部是否真实平滑演化"
+    },
+    "AT2023qbw": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "interesting_outlier",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C4_LDS_C5",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "likely_pattern_cn": "极平顶背景",
+      "reviewed_group_ids": "L3_L2_C4_LDS_C5",
+      "review_tags": "bi_color_offset|extremely_flat_state",
+      "reason": "几乎纯平顶背景，非常极端也非常好记，是 flat plateau 叶里最醒目的成员。；几乎纯平顶背景，非常极端也非常好记，是 flat plateau 叶里最醒目的成员。；极平顶背景；Exceptionally flat separated bi-color state.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "可作为这个叶子的极端视觉样本"
+    },
+    "AT2024gba": {
+      "labels": [
+        "data_issue",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C0",
+      "second_pass_confidence": "high",
+      "first_label": "data_issue",
+      "reason": "整条曲线呈现明显的分段切换和不自然的平台块，红蓝两波段都像被不同季节或不同状态拼起来，视觉上更像数据或建模风险而不是自然光变。；过去进入重点候选短表",
+      "check": "优先检查原始测光和季节边界"
+    },
+    "SN2018amc": {
+      "labels": [
+        "data_issue",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C6",
+      "second_pass_confidence": "high",
+      "first_label": "data_issue",
+      "reason": "整体更像异常校准或拼接造成的台阶和断裂，不适合直接做物理解读，应该先排数据与采样问题。；过去进入重点候选短表",
+      "check": "优先核查不同观测季和不同波段交界处是否存在系统偏差"
+    },
+    "SN2018atq": {
+      "labels": [
+        "typical",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C7",
+      "second_pass_confidence": "high",
+      "first_label": "typical",
+      "reason": "宽平台之后缓慢衰减，整体演化干净而稳定，很适合作为这个簇的主流脸谱。；过去进入重点候选短表",
+      "check": "可作典型模板保留，用来对照更极端的再亮峰和离群个体"
+    },
+    "SN2018bjo": {
+      "labels": [
+        "typical",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C7",
+      "second_pass_confidence": "high",
+      "first_label": "typical",
+      "reason": "亮平台和后续稳定长尾都很规整，读起来顺，能代表这个簇较正常的一支。；过去进入重点候选短表",
+      "check": "作为典型样本保留，帮助界定本簇的正常形态范围"
+    },
+    "SN2018dfa": {
+      "labels": [
+        "typical",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "physically_typical",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C6",
+      "second_pass_confidence": "high",
+      "first_label": "typical",
+      "likely_pattern_cn": "颜色阶跃 / 平台式衰减",
+      "reviewed_group_ids": "L2_C6",
+      "review_tags": "color_step|plateau_decline",
+      "reason": "颜色阶跃和平台式下落都很典型，能代表这个簇里较“正常”的一支。；颜色阶跃和平台式下落都很典型，能代表这个簇里较“正常”的一支。；颜色阶跃 / 平台式衰减；Clear color-step plateau then decline. || Clear color-step plateau then decline.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "作为对照模板保留，用来和连续 burst 个体比较"
+    },
+    "SN2018dhp": {
+      "labels": [
+        "typical",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "physically_typical",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C3",
+      "second_pass_confidence": "high",
+      "first_label": "typical",
+      "likely_pattern_cn": "平滑衰减 + 轻微台阶",
+      "reviewed_group_ids": "L2_C3",
+      "review_tags": "double_state|fast_drop",
+      "reason": "整体是平滑下降中叠加轻微台阶，既不太怪也不太乱，正好能代表该簇里较“规整”的 interaction-like 成员。；整体是平滑下降中叠加轻微台阶，既不太怪也不太乱，正好能代表该簇里较“规整”的 interaction-like 成员。；平滑衰减 + 轻微台阶；Steep early drop then dual-state plateau.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "作为控制样本保留，用来对照更极端的晚峰和 burst 个体"
+    },
+    "SN2018fpx": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C8_LDS_C1",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "从亮态平台向缓慢衰减过渡，完整性很好，值得保留。；过去进入重点候选短表",
+      "check": "适合和 AT2018zy 对照"
+    },
+    "SN2019bjv": {
+      "labels": [
+        "typical",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "physically_typical",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C8_LDS_C2",
+      "second_pass_confidence": "high",
+      "first_label": "typical",
+      "likely_pattern_cn": "prompt rise/decay",
+      "reviewed_group_ids": "L3_L2_C8_LDS_C2",
+      "review_tags": "clean_contrast_case|prompt_rise_decay",
+      "reason": "干净的快速 rise/decay 很适合当该叶的典型成员。；干净的快速 rise/decay 很适合当该叶的典型成员。；prompt rise/decay；Clean prompt rise/decay contrast case. || Clean prompt rise/decay contrast case.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "可作为 flare 叶里最规整的模板"
+    },
+    "SN2019clp": {
+      "labels": [
+        "typical",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_noise_m1",
+      "second_pass_confidence": "medium",
+      "first_label": "typical",
+      "reason": "虽然属于噪声叶，但它的起伏平台相对规整，可以作为这类对象的典型代表。；过去进入重点候选短表",
+      "check": "适合作为对照样本"
+    },
+    "SN2019cpo": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C7",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "高亮平台后突然跃迁下落，再转入较长尾部，形态转折非常明显，是这个簇里很抓眼的一个对象。；过去进入重点候选短表",
+      "check": "检查转折点前后是否有足够采样，并与典型平台成员做对照"
+    },
+    "SN2019meh": {
+      "labels": [
+        "typical",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "physically_typical",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C0",
+      "second_pass_confidence": "high",
+      "first_label": "typical",
+      "likely_pattern_cn": "亮平台 / 阶跃增亮",
+      "reviewed_group_ids": "L2_C0",
+      "review_tags": "luminous_plateau|step_brightening",
+      "reason": "具有该簇最容易读懂的亮平台和阶跃式增亮，形态稳定、信噪高，能很好代表这个异常池里比较像真天体的一类。；具有该簇最容易读懂的亮平台和阶跃式增亮，形态稳定、信噪高，能很好代表这个异常池里比较“像真天体”的一类。；亮平台 / 阶跃增亮；Step-like brightening into a luminous plateau. || Step-like brightening into a luminous plateau.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "可作为典型模板；重点看平台是否伴随再加热；可作为典型模板；重点看平台是否伴随轻微再加热或颜色演化"
+    },
+    "SN2019mge": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "interesting_outlier",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C6",
+      "second_pass_confidence": "high",
+      "first_label": "interesting",
+      "likely_pattern_cn": "连续 burst 序列",
+      "reviewed_group_ids": "L2_C6",
+      "review_tags": "burst_sequence|non_simple_typeII",
+      "reason": "不是简单的一次上升下降，而是连续 burst 序列，非常像这个簇里最极端的活跃成员。；不是简单的一次上升下降，而是连续 burst 序列，非常像这个簇里最极端的活跃成员。；连续 burst 序列；Sequence of bursts rather than a simple Type II decline. || Sequence of bursts rather than a simple Type II decline.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "适合重点复核原始时序，判断 burst 是真实多次注入还是观测窗口效应"
+    },
+    "SN2019oyt": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "worth_manual_review",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C8_LDS_C0",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "likely_pattern_cn": "双相振荡 / 双区间状态",
+      "reviewed_group_ids": "L3_L2_C8_LDS_C0",
+      "review_tags": "double_regime|oscillatory_state",
+      "reason": "双相振荡状态明显，结构复杂且辨识度高，适合作为有趣个体保留。；双相振荡状态明显，结构复杂且辨识度高，适合作为有趣个体保留。；双相振荡 / 双区间状态；Oscillatory double-regime behavior.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "检查是否存在周期性或系统窗口效应"
+    },
+    "SN2019pbm": {
+      "labels": [
+        "interesting",
+        "remove",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C6",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "高背景上持续出现多次结构变化，视觉上一直不安静，适合代表这簇里长期活跃的一类。；过去进入重点候选短表",
+      "check": "检查不同结构起伏是否都被双波段共同支持"
+    },
+    "SN2019wmr": {
+      "labels": [
+        "interesting",
+        "remove",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C7",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "相对平稳的背景上突然冒出一个窄高峰，峰形紧而亮，明显不是普通背景成员。；过去进入重点候选短表",
+      "check": "核查高峰是否在双波段同步，以及峰前是否已有缓慢抬升"
+    },
+    "SN2019yvr": {
+      "labels": [
+        "bridge",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "bridge_candidate",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C8_LDS_C0",
+      "second_pass_confidence": "high",
+      "first_label": "bridge",
+      "likely_pattern_cn": "高亮桥接态",
+      "reviewed_group_ids": "L3_L2_C8_LDS_C0",
+      "review_tags": "anchor_like_bright_state|key_bridge_example",
+      "reason": "高 S/N 的 bright-state bridge 代表，视觉上非常干净，必须保留。；高 S/N 的 bright-state bridge 代表，视觉上非常干净，必须保留。；高亮桥接态；High-S/N bright flat state and key bridge exemplar. || High-S/N bright flat state and key bridge exemplar.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "适合主线汇报展示"
+    },
+    "SN2020dya": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "interesting_outlier",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C4_LDS_C2",
+      "second_pass_confidence": "high",
+      "first_label": "interesting",
+      "likely_pattern_cn": "扁平基线后的突发尖峰",
+      "reviewed_group_ids": "L3_L2_C4_LDS_C2",
+      "review_tags": "flat_plus_spike|repeatable_pattern",
+      "reason": "扁平基线后突然冒出尖峰，很像异类事件或局部交互注入。；扁平基线后突然冒出尖峰，很像异类事件或局部交互注入。；扁平基线后的突发尖峰；Flat baseline plus narrow spike. || Flat baseline plus narrow spike.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "核查峰体是否有足够点数支撑"
+    },
+    "SN2020hem": {
+      "labels": [
+        "interesting",
+        "remove",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C6",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "在高亮底座上又长出一个窄峰，视觉上很像核区活跃型异常，而不是普通平滑超新星衰减。；过去进入重点候选短表",
+      "check": "优先核查宿主中心偏移和历史核活动迹象"
+    },
+    "SN2020hrw": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C7",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "一轮大峰之后接着长衰减拖尾，整体故事性很强，属于这个簇里值得停下来看的亮事件。；过去进入重点候选短表",
+      "check": "适合与典型平台成员对照，判断它为何显得更厚尾"
+    },
+    "SN2020nim": {
+      "labels": [
+        "data_issue",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C7",
+      "second_pass_confidence": "medium",
+      "first_label": "data_issue",
+      "reason": "强结构化重复块和尖峰同时出现，视觉上更像周期性风险对象或拟合失真，而不是干净的瞬变光变。；过去进入重点候选短表",
+      "check": "优先检查是否存在重复周期、观测窗口别名或 GP 过拟合"
+    },
+    "SN2020uhn": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C7",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "长时间相对平稳的背景后突然跳出一轮大峰，前后对比极强，是这个簇里很典型的离群亮事件。；过去进入重点候选短表",
+      "check": "检查大峰前后是否有颜色或斜率同步变化，确认不是边界效应"
+    },
+    "SN2020vws": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C0",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "在噪声更重的背景中突然长出一个晚峰，虽然不如典型成员干净，但足够显眼，值得保留。；过去进入重点候选短表",
+      "check": "检查晚峰是否同时出现在两波段"
+    },
+    "SN2021bug": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C4_LDS_C0",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "likely_pattern_cn": "箱体状态 + 晚峰",
+      "reason": "箱体状态和晚峰并存，视觉上很有辨识度，属于这个过渡叶里值得保留的有趣个体。；箱体状态和晚峰并存，视觉上很有辨识度，属于这个过渡叶里值得保留的有趣个体。；箱体状态 + 晚峰；过去进入重点候选短表",
+      "check": "核查平台块是否受 GP 平滑影响"
+    },
+    "SN2021can": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "interesting_outlier",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C4_LDS_C0",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "likely_pattern_cn": "紧凑晚峰 / 过渡衰减",
+      "reviewed_group_ids": "L3_L2_C4_LDS_C0",
+      "review_tags": "compact_event|late_spike",
+      "reason": "紧凑晚峰之后快速衰减，过渡感非常明确，是这个 mixed transition 叶里最有代表性的异常样本。；紧凑晚峰之后快速衰减，过渡感非常明确，是这个 mixed transition 叶里最有代表性的异常样本。；紧凑晚峰 / 过渡衰减；Compact late spike event. || Compact late spike event.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "适合与同叶中的箱体状态对象并排读图"
+    },
+    "SN2021gci": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C5",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "在较长的平稳状态之后突然强烈再亮，视觉上很有故事性。；过去进入重点候选短表",
+      "check": "核查峰前是否已有缓慢抬升"
+    },
+    "SN2021hxv": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "interesting_outlier",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C8_LDS_C2",
+      "second_pass_confidence": "high",
+      "first_label": "interesting",
+      "likely_pattern_cn": "重复 boxy states",
+      "reviewed_group_ids": "L3_L2_C8_LDS_C2",
+      "review_tags": "boxy_states|late_flare",
+      "reason": "反复的 boxy states 是这个 flare 叶最显眼的形态，必须记住。；反复的 boxy states 是这个 flare 叶最显眼的形态，必须记住。；重复 boxy states；Repeated boxy states then flare. || Repeated boxy states then flare.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "适合和 SN2019bjv 这类典型对象对照"
+    },
+    "SN2021lwz": {
+      "labels": [
+        "data_issue",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C4_LDS_C2",
+      "second_pass_confidence": "medium",
+      "first_label": "data_issue",
+      "reason": "整体过于方盒状，边缘也很陡，视觉上更像采样与 GP 共同造成的风险样本。；过去进入重点候选短表",
+      "check": "优先排查 GP 过拟合与观测稀疏"
+    },
+    "SN2021mkr": {
+      "labels": [
+        "data_issue",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C3",
+      "second_pass_confidence": "high",
+      "first_label": "data_issue",
+      "reason": "底噪和基线形态更像核区高背景或复杂系统误差上叠了一个事件，值得优先排查数据或核活动污染，而不是直接做物理解读。；过去进入重点候选短表",
+      "check": "先核查宿主中心偏移、历史变动与是否存在长期核活动线索"
+    },
+    "SN2021nof": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C1",
+      "second_pass_confidence": "high",
+      "first_label": "interesting",
+      "likely_pattern_cn": "高平顶 + 晚期再增强",
+      "reason": "整体维持高平顶状态，后期还有明显再增强，平台和再亮峰都非常醒目，桥接感很强。；整体维持高平顶状态，后期还有明显再增强，平台和再亮峰都非常醒目，桥接感很强。；高平顶 + 晚期再增强；过去进入重点候选短表",
+      "check": "检查再增强是否在两波段同步；检查再增强是否在两波段同步，并确认不是末端采样造成的假峰"
+    },
+    "SN2021sto": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C8_LDS_C1",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "likely_pattern_cn": "高亮箱体 + 急降再平台",
+      "reason": "高亮箱体之后急降再进入平台，戏剧性很强，是一眼能认出的异常样本。；高亮箱体之后急降再进入平台，戏剧性很强，是一眼能认出的异常样本。；高亮箱体 + 急降再平台；过去进入重点候选短表",
+      "check": "核查高亮箱体是否受少数高点影响"
+    },
+    "SN2021tyw": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C6",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "大部分时间较平稳，但在末端突然强烈抬升，事件感很强，值得单独保留。；过去进入重点候选短表",
+      "check": "检查抬升前后是否伴随颜色变化和噪声状态改变"
+    },
+    "SN2021zaa": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C7",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "整体稳定背景后突然出现一次很大的再亮峰，记忆点非常强，适合作为这个簇的显眼个体。；过去进入重点候选短表",
+      "check": "重点核查再亮峰是否在两波段同步，以及峰后回落是否平滑"
+    },
+    "SN2022actd": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C6",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "平稳背景后突然出现大振幅 flare，和周围背景分离度很高，是很标准的强异常成员。；过去进入重点候选短表",
+      "check": "核查 flare 前后采样是否连续并检查峰顶是否饱和"
+    },
+    "SN2022bdu": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C6",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "一直较高的背景上突然长出孤立亮峰，非常显眼，适合作为高背景 flare 异常的代表。；过去进入重点候选短表",
+      "check": "检查亮峰是否只由少数点支撑，以及双波段是否同时抬升"
+    },
+    "SN2022erq": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "interesting_outlier",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C0",
+      "second_pass_confidence": "high",
+      "first_label": "interesting",
+      "likely_pattern_cn": "孤立快亮尖峰 / 可能是极端爆发或交互事件",
+      "reviewed_group_ids": "L2_C0",
+      "review_tags": "extreme_luminous|singular_spike",
+      "reason": "在近乎平稳的背景上突然长出一个孤立而非常尖锐的亮峰，峰值之后又快速回落，和同簇大多数对象相比过于极端，因此值得单独保留。；在近乎平稳的背景上突然长出一个孤立而非常尖锐的亮峰，峰值之后又快速回落，和同簇大多数对象相比过于极端，因此值得单独保留。；孤立快亮尖峰 / 可能是极端爆发或交互事件；Most extreme single sharp luminous spike in C0. || Most extreme single sharp luminous spike in C0.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "核查峰前后是否有采样缺口与单夜异常点；核查峰前后是否有采样缺口与单夜异常点，并确认这次尖峰不是由少数坏点驱动"
+    },
+    "SN2022frq": {
+      "labels": [
+        "typical",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "physically_typical",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C8_LDS_C1",
+      "second_pass_confidence": "high",
+      "first_label": "typical",
+      "likely_pattern_cn": "窄峰回落",
+      "reviewed_group_ids": "L3_L2_C8_LDS_C1",
+      "review_tags": "clean_event|smooth_peak_return",
+      "reason": "窄峰回落非常标准，是这个 clean bridge 叶里最合适的典型样本。；窄峰回落非常标准，是这个 clean bridge 叶里最合适的典型样本。；窄峰回落；Clean rise-peak-return event. || Clean rise-peak-return event.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "作为典型控制对象保留"
+    },
+    "SN2022lvm": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "interesting_outlier",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C5",
+      "second_pass_confidence": "high",
+      "first_label": "interesting",
+      "likely_pattern_cn": "高亮平顶 + 单次尖峰",
+      "reviewed_group_ids": "L2_C5",
+      "review_tags": "clean_outlier|flat_plus_spike",
+      "reason": "高亮而非常平的背景上只叠加一次突出的尖峰，极其容易识别，适合作为平顶家族里的异常个体。；高亮而非常平的背景上只叠加一次突出的尖峰，极其容易识别，适合作为“平顶家族里的异常个体”。；高亮平顶 + 单次尖峰；Classic flat state plus sudden late spike. || Classic flat state plus sudden late spike.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "核查尖峰是否真实同步出现在两波段；核查尖峰是否真实同步出现在两波段，并判断是否与平台末期状态切换有关"
+    },
+    "SN2022ngb": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "interesting_outlier",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C1",
+      "second_pass_confidence": "high",
+      "first_label": "interesting",
+      "likely_pattern_cn": "晚峰尖刺 / 桥接异常个体",
+      "reviewed_group_ids": "L2_C1",
+      "review_tags": "late_spike|structured_tail",
+      "reason": "在相对平缓的演化上突然出现晚峰尖刺，和该簇常见的桥接平台相比更极端，因此值得单独标出。；在相对平缓的演化上突然出现晚峰尖刺，和该簇常见的桥接平台相比更极端，因此值得单独标出。；晚峰尖刺 / 桥接异常个体；Late spike after long noisy tail. || Late spike after long noisy tail.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "核查尖刺附近是否有足够点数；核查尖刺附近是否有足够点数，并对比同簇是否存在相似的末端爆发"
+    },
+    "SN2022opm": {
+      "labels": [
+        "data_issue",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C7",
+      "second_pass_confidence": "medium",
+      "first_label": "data_issue",
+      "reason": "高振幅箱体结构和强振荡同时出现，GP 曲线的人工感很重，数据与拟合风险都比较明显。；过去进入重点候选短表",
+      "check": "优先检查稀疏采样区、坏点和 GP 是否被过度平滑或振荡化"
+    },
+    "SN2022qzx": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "interesting_outlier",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C8_LDS_C2",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "likely_pattern_cn": "背景上的窄尖峰",
+      "reviewed_group_ids": "L3_L2_C8_LDS_C2",
+      "review_tags": "flat_background|narrow_spike",
+      "reason": "窄尖峰从背景中一下跳出，分离度高，视觉上非常醒目。；窄尖峰从背景中一下跳出，分离度高，视觉上非常醒目。；背景上的窄尖峰；Narrow late spike on flat background.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "重点看尖峰是否单次还是重复"
+    },
+    "SN2022uda": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "interesting_outlier",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C4_LDS_C3",
+      "second_pass_confidence": "high",
+      "first_label": "interesting",
+      "likely_pattern_cn": "重复 burst + 晚峰",
+      "reviewed_group_ids": "L3_L2_C4_LDS_C3",
+      "review_tags": "burst_train|late_flare",
+      "reason": "重复 burst 后再接晚峰，是这个 burst 叶中最该留下的对象之一。；重复 burst 后再接晚峰，是这个 burst 叶中最该留下的对象之一。；重复 burst + 晚峰；Repeated bursts followed by late flare. || Repeated bursts followed by late flare.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "适合作为 burst 叶的代表异常"
+    },
+    "SN2022vxc": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "interesting_outlier",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C4_LDS_C-1",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "likely_pattern_cn": "末端尖峰",
+      "reviewed_group_ids": "L3_L2_C4_LDS_C-1",
+      "review_tags": "flat_plus_spike|terminal_outlier",
+      "reason": "末端尖峰非常醒目，在这个小噪声叶里最值得留下。；末端尖峰非常醒目，在这个小噪声叶里最值得留下。；末端尖峰；Late spike on a flat baseline. || Late spike on a flat baseline.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "检查尖峰是否受单个窗口影响"
+    },
+    "SN2022zxw": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "interesting_outlier",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C7",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "likely_pattern_cn": "晚期窄峰 + 拖尾",
+      "reviewed_group_ids": "L2_C7",
+      "review_tags": "clean_tail_event|late_flare",
+      "reason": "晚期出现非常醒目的窄峰并带拖尾，在整体较平稳的 family 里是最该保留的晚 flare 个体之一。；晚期出现窄峰并带拖尾，在整体较平稳的 family 里算是最醒目的少数成员之一。；晚期窄峰 + 拖尾；Late flare on an otherwise flat baseline.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "核查峰后拖尾是否真实延续而非边界拟合，并确认 flare 不是单夜异常；核查峰后拖尾是否真实延续而非边界拟合"
+    },
+    "SN2023fwr": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C3",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "长期较平稳之后在末端急剧抬升，后段形态很抓眼，适合作为这个簇里后期转强的一类代表。；过去进入重点候选短表",
+      "check": "检查抬升是否与观测窗口切换重合，并比较抬升前后颜色变化"
+    },
+    "SN2023lgw": {
+      "labels": [
+        "typical",
+        "keep",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L3_L2_C8_LDS_C0",
+      "second_pass_confidence": "medium",
+      "first_label": "typical",
+      "reason": "整体平滑而中心感强，适合当这一叶里较规整的典型对象。；过去进入重点候选短表",
+      "check": "可作控制模板"
+    },
+    "SN2023omf": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "interesting_outlier",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C6",
+      "second_pass_confidence": "high",
+      "first_label": "interesting",
+      "likely_pattern_cn": "重复末端 flare",
+      "reviewed_group_ids": "L2_C6",
+      "review_tags": "repetitive_state|terminal_flare",
+      "reason": "末端 flare 重复出现，整体活跃度高，属于那种一眼就能看出“不像平凡背景”的对象。；末端 flare 重复出现，整体活跃度高，属于那种一眼就能看出“不像平凡背景”的对象。；重复末端 flare；Repetitive flat state followed by terminal flare.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "看 flare 是否周期性重复，还是随机爆发；核查每次 flare 的颜色一致性"
+    },
+    "SN2023twg": {
+      "labels": [
+        "interesting",
+        "remove",
+        "second_pass",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C5",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "reason": "几乎纯平的背景上末端突然出现强事件，对比度很高，适合保留。；过去进入重点候选短表",
+      "check": "检查事件是否集中在少数观测夜"
+    },
+    "SN2024fof": {
+      "labels": [
+        "interesting",
+        "keep",
+        "second_pass",
+        "cluster_explanation",
+        "interesting_outlier",
+        "review_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "sources": [
+        "cluster_second_pass",
+        "cluster_source_explanations",
+        "reviewed_source_memory",
+        "focus_rendered",
+        "priority_candidate"
+      ],
+      "priority": 20,
+      "group_id": "L2_C6",
+      "second_pass_confidence": "medium",
+      "first_label": "interesting",
+      "likely_pattern_cn": "孤立尖峰",
+      "reviewed_group_ids": "L2_C6",
+      "review_tags": "flat_background|isolated_spike",
+      "reason": "孤立尖峰异常明显，峰体窄而亮，和周围背景分离度很高。；孤立尖峰异常明显，峰体窄而亮，和周围背景分离度很高。；孤立尖峰；Flat baseline with one isolated sharp flare.；过去进入人工复核渲染池；过去进入重点候选短表",
+      "check": "核查峰前后是否有足够采样支持其真实存在"
+    },
+    "AT2018cee": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C4_LDS_C1",
+      "reason": "",
+      "check": ""
+    },
+    "AT2018ehi": {
+      "labels": [
+        "worth_manual_review",
+        "review_memory",
+        "focus_rendered"
+      ],
+      "sources": [
+        "reviewed_source_memory",
+        "focus_rendered"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C4_LDS_C-1",
+      "review_tags": "color_decoupled|multi_bump_decline",
+      "reason": "Multi-bump decline with decoupled colors.；过去进入人工复核渲染池",
+      "check": ""
+    },
+    "AT2018qu": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C8_LDS_C0",
+      "reason": "",
+      "check": ""
+    },
+    "AT2019gcx": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_C0",
+      "reason": "",
+      "check": ""
+    },
+    "AT2019lse": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C4_LDS_C5",
+      "reason": "",
+      "check": ""
+    },
+    "AT2019wja": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_C3",
+      "reason": "",
+      "check": ""
+    },
+    "AT2019wot": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_C5",
+      "reason": "",
+      "check": ""
+    },
+    "AT2019zbd": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_C3",
+      "reason": "",
+      "check": ""
+    },
+    "AT2020aenh": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_C3",
+      "reason": "",
+      "check": ""
+    },
+    "AT2020dee": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C8_LDS_C2",
+      "reason": "",
+      "check": ""
+    },
+    "AT2020djm": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_C2",
+      "reason": "",
+      "check": ""
+    },
+    "AT2020gsf": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C8_LDS_C0",
+      "reason": "",
+      "check": ""
+    },
+    "AT2020hey": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C4_LDS_C4",
+      "reason": "",
+      "check": ""
+    },
+    "AT2020ibp": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_C1",
+      "reason": "",
+      "check": ""
+    },
+    "AT2020mkj": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_C7",
+      "reason": "",
+      "check": ""
+    },
+    "AT2020px": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_C2",
+      "reason": "",
+      "check": ""
+    },
+    "AT2020ssh": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_C7",
+      "reason": "",
+      "check": ""
+    },
+    "AT2020tuq": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C4_LDS_C0",
+      "reason": "",
+      "check": ""
+    },
+    "AT2020uda": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C8_LDS_C1",
+      "reason": "",
+      "check": ""
+    },
+    "AT2020xj": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C8_LDS_C1",
+      "reason": "",
+      "check": ""
+    },
+    "AT2020yyj": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C4_LDS_C1",
+      "reason": "",
+      "check": ""
+    },
+    "AT2020zlf": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C4_LDS_C5",
+      "reason": "",
+      "check": ""
+    },
+    "AT2021ahvt": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_C6",
+      "reason": "",
+      "check": ""
+    },
+    "AT2021ezr": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C8_LDS_C3",
+      "reason": "",
+      "check": ""
+    },
+    "AT2021llj": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C8_LDS_C3",
+      "reason": "",
+      "check": ""
+    },
+    "AT2021sje": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C4_LDS_C4",
+      "reason": "",
+      "check": ""
+    },
+    "AT2021va": {
+      "labels": [
+        "interesting_outlier",
+        "review_memory",
+        "focus_rendered"
+      ],
+      "sources": [
+        "reviewed_source_memory",
+        "focus_rendered"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L1_boundary_outliers",
+      "review_tags": "color_decoupled|late_sharp_flare",
+      "reason": "Late isolated red flare on weak baseline.；过去进入人工复核渲染池",
+      "check": ""
+    },
+    "AT2022abft": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C8_LDS_C2",
+      "reason": "",
+      "check": ""
+    },
+    "AT2022crk": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_noise_m1",
+      "reason": "",
+      "check": ""
+    },
+    "AT2022jks": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_C1",
+      "reason": "",
+      "check": ""
+    },
+    "AT2023eru": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_C0",
+      "reason": "",
+      "check": ""
+    },
+    "SN2018arc": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_C2",
+      "reason": "",
+      "check": ""
+    },
+    "SN2018cew": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C4_LDS_C5",
+      "reason": "",
+      "check": ""
+    },
+    "SN2018ell": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C8_LDS_C3",
+      "reason": "",
+      "check": ""
+    },
+    "SN2018jee": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_C1",
+      "reason": "",
+      "check": ""
+    },
+    "SN2019cob": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_C7",
+      "reason": "",
+      "check": ""
+    },
+    "SN2019fci": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C4_LDS_C5",
+      "reason": "",
+      "check": ""
+    },
+    "SN2019hjg": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C8_LDS_C-1",
+      "reason": "",
+      "check": ""
+    },
+    "SN2019liw": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_C6",
+      "reason": "",
+      "check": ""
+    },
+    "SN2019oua": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_noise_m1",
+      "reason": "",
+      "check": ""
+    },
+    "SN2019tbq": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C8_LDS_C3",
+      "reason": "",
+      "check": ""
+    },
+    "SN2019tjt": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_C2",
+      "reason": "",
+      "check": ""
+    },
+    "SN2019tvk": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C4_LDS_C2",
+      "reason": "",
+      "check": ""
+    },
+    "SN2020aafm": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C8_LDS_C0",
+      "reason": "",
+      "check": ""
+    },
+    "SN2020iag": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_C7",
+      "reason": "",
+      "check": ""
+    },
+    "SN2020kba": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C4_LDS_C-1",
+      "reason": "",
+      "check": ""
+    },
+    "SN2020npb": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C4_LDS_C0",
+      "reason": "",
+      "check": ""
+    },
+    "SN2020ntt": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C4_LDS_C0",
+      "reason": "",
+      "check": ""
+    },
+    "SN2020zgl": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C4_LDS_C-1",
+      "reason": "",
+      "check": ""
+    },
+    "SN2021bgd": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_C5",
+      "reason": "",
+      "check": ""
+    },
+    "SN2021bmv": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_noise_m1",
+      "reason": "",
+      "check": ""
+    },
+    "SN2021cjy": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C4_LDS_C4",
+      "reason": "",
+      "check": ""
+    },
+    "SN2021fop": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C4_LDS_C2",
+      "reason": "",
+      "check": ""
+    },
+    "SN2021yfj": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C4_LDS_C1",
+      "reason": "",
+      "check": ""
+    },
+    "SN2022oeh": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C4_LDS_C1",
+      "reason": "",
+      "check": ""
+    },
+    "SN2023sia": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L2_C5",
+      "reason": "",
+      "check": ""
+    },
+    "SN2023uru": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C4_LDS_C3",
+      "reason": "",
+      "check": ""
+    },
+    "SN2023vbx": {
+      "labels": [
+        "central",
+        "review_memory"
+      ],
+      "sources": [
+        "reviewed_source_memory"
+      ],
+      "priority": 35,
+      "reviewed_group_ids": "L3_L2_C4_LDS_C3",
+      "reason": "",
+      "check": ""
+    }
+  },
+  "source_counts": {
+    "manifest_sources": 14537,
+    "manual_sources": 153,
+    "focus_rendered": 37,
+    "priority_candidate": 82
+  }
+}
