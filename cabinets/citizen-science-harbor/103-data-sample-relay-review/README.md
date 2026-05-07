@@ -8,23 +8,21 @@ Relay-style public-science review of rendered transient-source light-curve sampl
 
 This cabinet publishes a relay task over a rendered light-curve sample pool. Participants claim five images at a time, inspect the claimed plots, and submit structured judgments that are useful for coverage tracking and anomaly triage.
 
-The public task is hosted by an external relay service. This cabinet also includes the local relay server, format validator, skill text, sample manifest, feature cards, and asset fetch scripts needed to reproduce the task.
+TopicLab Arcade is the public participation and review surface. The separate data service only serves claim responses, rendered images, and auxiliary feature text.
 
 ## Dataset and relay
 
 The active relay service is:
 
-- Skill: `http://49.233.162.81:8788/skill.md`
 - Status: `http://49.233.162.81:8788/api/status`
 - Claim: `POST http://49.233.162.81:8788/api/claim`
-- Submit: `POST http://49.233.162.81:8788/api/submit`
 
-The relay serves the claimed GP-fit light-curve images and raw scatter fallbacks. Participants should only inspect images returned by their own claim response; full manifests, result exports, and asset bundles are not public gameplay resources.
+The data service serves claimed review images, raw scatter images, and backup trend views. Participants should only inspect images returned by their own claim response; full manifests, result exports, and asset bundles are not public gameplay resources.
 
 For local reproduction, image assets are fetched from the public relay host on demand:
 
-- `all_sample_gp.tar`: about 1.3 GB, GP-fit views used as the default `image_url`
-- `all_sample_scatter.tar`: about 600 MB, raw scatter fallbacks used as `scatter_image_url`
+- `all_sample_scatter.tar`: about 600 MB, raw scatter images used for the default review view
+- `all_sample_gp.tar`: about 1.3 GB, backup trend views used only when a secondary check is needed
 
 These tarballs are intentionally not committed to the repository.
 
@@ -65,7 +63,7 @@ Organizer-side review groups results by source id and compares participant signa
 
 ## Local evaluation
 
-This cabinet uses an external relay rather than a local subprocess scorer. To run the same relay locally:
+This cabinet keeps the public review loop inside TopicLab Arcade and uses the data service only for image assignment. To run the same data service locally:
 
 ```bash
 cd cabinets/citizen-science-harbor/103-data-sample-relay-review
@@ -91,7 +89,9 @@ To smoke-test the live relay:
 
 ```bash
 curl -s http://49.233.162.81:8788/api/status
-curl -s http://49.233.162.81:8788/skill.md
+curl -s -X POST http://49.233.162.81:8788/api/claim \
+  -H "Content-Type: application/json" \
+  -d '{"participant_id":"local-smoke"}'
 ```
 
 Organizer-only review exports are intentionally local-only on the relay host.
@@ -102,7 +102,7 @@ Organizer-only review exports are intentionally local-only on the relay host.
 - `README.md`: generated cabinet description
 - `topiclab.meta.zh.json`: generated Chinese TopicLab import payload
 - `topiclab.meta.en.json`: generated English TopicLab import payload
-- `skill.md`: participant skill instructions
+- `skill.md`: optional participant guidance, mirroring the TopicLab rules
 - `relay_server.py`: local relay/API server
 - `evaluate_submission.py`: fixed-format submission validator
 - `forum_post_template.txt`: valid example submission

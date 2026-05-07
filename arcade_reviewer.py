@@ -13,6 +13,7 @@ Current behavior:
 The first built-in runtime supports:
 - `cabinets/turing-teahouse/101-CIFAR`
 - `cabinets/citizen-science-harbor/102-variable-star-citizen-science`
+- `cabinets/citizen-science-harbor/103-data-sample-relay-review`
 
 Environment variables:
 - `ARCADE_BASE_URL` default: `http://127.0.0.1:8001`
@@ -39,6 +40,7 @@ import atexit
 import json
 import os
 import random
+import re
 import shlex
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -67,10 +69,12 @@ _log_dir: Path = Path(__file__).resolve().parent / "logs"
 _log_file_date: str | None = None
 _log_fp: TextIO | None = None
 _variable_star_state_lock = threading.Lock()
+_transient_relay_state_lock = threading.Lock()
 _setup_lock = threading.Lock()
 _completed_setups: set[tuple[Path, str]] = set()
 
 VARIABLE_STAR_CABINET_SOURCE = "cabinets/citizen-science-harbor/102-variable-star-citizen-science"
+TRANSIENT_RELAY_CABINET_SOURCE = "cabinets/citizen-science-harbor/103-data-sample-relay-review"
 
 
 def configure_log_dir(log_dir: Path) -> None:
@@ -562,6 +566,142 @@ def update_variable_star_coverage(
     }
 
 
+def transient_relay_state_path(repo_root: Path) -> Path:
+    return repo_root / "generated" / "reviewer_state" / "103-data-sample-relay-review.coverage.json"
+
+
+def load_transient_relay_state(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {
+            "schema_version": 1,
+            "processed_submission_ids": [],
+            "covered_urls": {},
+        }
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if payload.get("schema_version") != 1:
+        raise ValueError(f"invalid transient relay coverage state: {path}")
+    if not isinstance(payload.get("processed_submission_ids"), list):
+        raise ValueError(f"invalid transient relay processed submissions: {path}")
+    if not isinstance(payload.get("covered_urls"), dict):
+        raise ValueError(f"invalid transient relay covered_urls: {path}")
+    return payload
+
+
+def load_transient_manifest_urls(cabinet_dir: Path) -> list[str]:
+    manifest_path = cabinet_dir / "full-manifest.json"
+    if not manifest_path.exists():
+        return []
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    items = payload.get("items") if isinstance(payload, dict) else None
+    if not isinstance(items, list):
+        return []
+    urls: list[str] = []
+    for row in items:
+        if not isinstance(row, dict):
+            continue
+        image_url = row.get("image_url") or row.get("gp_image_url")
+        if isinstance(image_url, str) and image_url.strip():
+            urls.append(normalize_transient_review_url(image_url.strip()))
+    return urls
+
+
+def normalize_transient_review_url(url: str) -> str:
+    text = str(url or "").strip()
+    if "/all_sample_gp/" in text:
+        return text.replace("/all_sample_gp/", "/all_sample_review/").replace("_sample_gp.png", "_sample_review.png")
+    if "/all_sample_scatter/" in text:
+        return text.replace("/all_sample_scatter/", "/all_sample_review/").replace("_sample_scatter.png", "_sample_review.png")
+    return text
+
+
+def update_transient_relay_coverage(
+    *,
+    repo_root: Path,
+    cabinet_dir: Path,
+    submission_post_id: str,
+    topic_id: str,
+    rows: list[dict[str, Any]],
+    next_batch_size: int = 5,
+) -> dict[str, Any]:
+    state_path = transient_relay_state_path(repo_root)
+    with _transient_relay_state_lock:
+        state = load_transient_relay_state(state_path)
+        processed_submission_ids = set(str(value) for value in state.get("processed_submission_ids") or [])
+        covered_urls = state.get("covered_urls") or {}
+        if not isinstance(covered_urls, dict):
+            covered_urls = {}
+
+        row_statuses: list[dict[str, Any]] = []
+        is_replay = submission_post_id in processed_submission_ids
+        newly_covered_count = 0
+        for row in rows:
+            image_url = normalize_transient_review_url(str(row.get("image_url") or "").strip())
+            if not image_url:
+                continue
+            existing = covered_urls.get(image_url)
+            previously_seen = isinstance(existing, dict) and int(existing.get("count") or 0) > 0
+            if not is_replay:
+                count = int(existing.get("count") or 0) + 1 if isinstance(existing, dict) else 1
+                covered_urls[image_url] = {
+                    "count": count,
+                    "first_submission_post_id": (
+                        existing.get("first_submission_post_id")
+                        if isinstance(existing, dict) and existing.get("first_submission_post_id")
+                        else submission_post_id
+                    ),
+                    "first_topic_id": (
+                        existing.get("first_topic_id")
+                        if isinstance(existing, dict) and existing.get("first_topic_id")
+                        else topic_id
+                    ),
+                    "last_submission_post_id": submission_post_id,
+                    "last_topic_id": topic_id,
+                    "last_seen_at": datetime.now(_LOG_TZ).isoformat(),
+                }
+                if not previously_seen:
+                    newly_covered_count += 1
+            row_statuses.append(
+                {
+                    "image_url": image_url,
+                    "source_id": row.get("image_key") or row.get("source_id"),
+                    "is_new_coverage": not previously_seen,
+                    "previously_seen": previously_seen,
+                }
+            )
+
+        if not is_replay:
+            processed_submission_ids.add(submission_post_id)
+            state = {
+                "schema_version": 1,
+                "processed_submission_ids": sorted(processed_submission_ids),
+                "covered_urls": covered_urls,
+            }
+            write_json_atomic(state_path, state)
+
+        all_urls = load_transient_manifest_urls(cabinet_dir)
+        unseen_urls = [url for url in all_urls if url not in covered_urls]
+        seed_material = f"{topic_id}:{submission_post_id}"
+        rng = random.Random(seed_material)
+        if len(unseen_urls) <= next_batch_size:
+            next_batch = unseen_urls
+        else:
+            next_batch = rng.sample(unseen_urls, next_batch_size)
+        total_pool = len(all_urls)
+        covered_total = len(covered_urls)
+
+    return {
+        "is_replay": is_replay,
+        "rows": row_statuses,
+        "newly_covered_count": newly_covered_count,
+        "covered_total": covered_total,
+        "total_pool": total_pool,
+        "remaining_unseen": max(total_pool - covered_total, 0),
+        "coverage_ratio": round(covered_total / total_pool, 4) if total_pool else None,
+        "next_batch": next_batch,
+        "state_path": str(state_path),
+    }
+
+
 FORMAT_WRONG_BODY = "提交格式错误，请严格按照题目要求格式重新提交。"
 EVALUATOR_RUNTIME_ERROR_BODY = "评测器运行异常，请稍后重试。"
 ALLOWED_CIFAR_FIELDS = ("epochs", "lr", "weight_decay", "batch_size", "momentum")
@@ -960,9 +1100,516 @@ def run_102_variable_star_relay(
     return body, result
 
 
+def score_transient_row(row: dict[str, Any], coverage_row: dict[str, Any]) -> tuple[int, list[str]]:
+    points = 0
+    notes: list[str] = []
+    if not row.get("ok"):
+        return points, notes
+    points += 2
+    notes.append("有效格式")
+    if coverage_row.get("is_new_coverage"):
+        points += 2
+        notes.append("首次覆盖")
+    if row.get("reason"):
+        points += 1
+        notes.append("有判读理由")
+    tags = row.get("evidence_tags") or []
+    if isinstance(tags, list) and tags:
+        points += 1
+        notes.append("有证据标签")
+    role = str(row.get("role") or "")
+    try:
+        anomaly_score = int(row.get("anomaly_score") or 0)
+    except (TypeError, ValueError):
+        anomaly_score = 0
+    followup = str(row.get("needs_followup") or "")
+    if (
+        (role in {"interesting", "bridge", "data_issue"} and (followup == "yes" or anomaly_score >= 3))
+        or (role in {"typical", "control"} and followup == "no" and anomaly_score <= 2)
+        or role == "unsure"
+    ):
+        points += 1
+        notes.append("判断自洽")
+    return points, notes
+
+
+def markdown_cell(value: Any, *, limit: int = 120) -> str:
+    text = str(value or "").replace("\n", " ").replace("|", "／").strip()
+    return text[: limit - 1] + "…" if len(text) > limit else text
+
+
+def transient_role_label(role: Any) -> str:
+    labels = {
+        "interesting": "优先回看",
+        "bridge": "需要复核",
+        "data_issue": "先查质量",
+        "typical": "普通样本",
+        "control": "对照样本",
+        "unsure": "证据不足",
+    }
+    return labels.get(str(role or ""), str(role or "-"))
+
+
+def transient_evaluation_table(details: list[dict[str, Any]]) -> list[str]:
+    if not details:
+        return []
+    lines = [
+        "",
+        "| 行 | 源 | 判读 | 公开计分 | 有效榜暂记 | 复核参照 | 得分依据 | 先验说明 |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for detail in details:
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    markdown_cell(detail["line"], limit=12),
+                    markdown_cell(detail["source_id"], limit=28),
+                    markdown_cell(f"{detail['role']}／异常分 {detail['anomaly_score']}", limit=42),
+                    markdown_cell(f"+{detail['points']}；{detail['coverage']}", limit=36),
+                    markdown_cell(f"+{detail['effective_delta']}；{detail['effective_note']}", limit=42),
+                    markdown_cell(detail["prior_label"], limit=46),
+                    markdown_cell(detail["notes"], limit=64),
+                    markdown_cell(detail["prior_reason"], limit=96),
+                ]
+            )
+            + " |"
+        )
+    return lines
+
+
+def load_json_file(path: Path, fallback: dict[str, Any] | None = None) -> dict[str, Any]:
+    if not path.exists():
+        return dict(fallback or {})
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return dict(fallback or {})
+    return payload if isinstance(payload, dict) else dict(fallback or {})
+
+
+def load_transient_prior_labels(cabinet_dir: Path) -> dict[str, Any]:
+    payload = load_json_file(cabinet_dir / "prior-labels.json")
+    focus = {str(value) for value in payload.get("focus_rendered") or []}
+    priority = {str(value) for value in payload.get("priority_candidate") or []}
+    manual_sources = payload.get("manual_sources") if isinstance(payload.get("manual_sources"), dict) else {}
+
+    # Local asset folders are optional; they are present in full data deployments
+    # and absent in lightweight PR checkouts. Merge them when available.
+    for folder_name, target in (("level_scatter", focus), ("sample_shortlist_scatter", priority)):
+        folder = cabinet_dir / folder_name
+        if not folder.exists():
+            continue
+        for path in folder.glob("*.png"):
+            target.add(source_id_from_filename(path.name))
+    return {"focus_rendered": focus, "priority_candidate": priority, "manual_sources": manual_sources}
+
+
+def source_id_from_filename(name: str) -> str:
+    text = str(name or "")
+    for suffix in (
+        "_sample_review.png",
+        "_sample_gp.png",
+        "_sample_scatter.png",
+        "_level_scatter.png",
+        "_scatter.png",
+        ".png",
+    ):
+        if text.endswith(suffix):
+            return text[: -len(suffix)]
+    return Path(text).stem
+
+
+def load_transient_feature_cards(cabinet_dir: Path) -> dict[str, dict[str, Any]]:
+    payload = load_json_file(cabinet_dir / "feature-cards.json")
+    cards = payload.get("cards")
+    return cards if isinstance(cards, dict) else {}
+
+
+def transient_row_source_id(row: dict[str, Any]) -> str:
+    for key in ("source_id", "image_key"):
+        value = str(row.get(key) or "").strip()
+        if value and "/" not in value:
+            return value
+    image_url = str(row.get("image_url") or "").split("?", 1)[0].rstrip("/")
+    return source_id_from_filename(image_url.rsplit("/", 1)[-1])
+
+
+def transient_participant_followup(row: dict[str, Any]) -> bool:
+    try:
+        anomaly_score = int(row.get("anomaly_score") or 0)
+    except (TypeError, ValueError):
+        anomaly_score = 0
+    return bool(
+        row.get("needs_followup") == "yes"
+        or row.get("role") in {"interesting", "bridge", "data_issue"}
+        or anomaly_score >= 3
+    )
+
+
+def transient_quality_label(value: Any) -> str:
+    return {
+        "A_completed_high": "A 高质量",
+        "B_completed_good": "B 可用",
+        "C_imputed_usable": "C 插补可用",
+        "D_low_quality": "D 低质量",
+    }.get(str(value or ""), str(value or ""))
+
+
+def transient_manual_label_text(manual: dict[str, Any], labels: list[str]) -> list[str]:
+    raw_text = " ".join(str(value or "") for value in [*labels, manual.get("manual_status"), manual.get("scientific_role"), manual.get("visual_class")]).lower()
+    display: list[str] = []
+    tier = str(manual.get("tier") or "").strip()
+    if tier:
+        display.append(f"{tier} 级人工记录")
+    if "data_quality" in raw_text or "data_issue" in raw_text or "contaminant" in raw_text:
+        display.append("数据质量优先")
+    if "core_known_unknown" in raw_text or "science_first_core" in raw_text:
+        display.append("主科学候选")
+    elif "known_unknown_bridge" in raw_text or "bridge" in raw_text:
+        display.append("桥接候选")
+    elif "unknown_unknown" in raw_text:
+        display.append("未知候选")
+    if "interesting" in raw_text:
+        display.append("值得回看")
+    if "typical" in raw_text and not any(text in display for text in ("主科学候选", "桥接候选", "未知候选")):
+        display.append("典型模板")
+    if "control" in raw_text:
+        display.append("对照样本")
+    if "focus_rendered" in raw_text:
+        display.append("已渲染复核")
+    if "priority_candidate" in raw_text:
+        display.append("重点短表")
+    if not display:
+        display.append("Sample 人工记录")
+    deduped: list[str] = []
+    for item in display:
+        if item not in deduped:
+            deduped.append(item)
+    return deduped[:4]
+
+
+def transient_public_note_segments(text: str, *, limit: int = 3) -> list[str]:
+    replacements = {
+        "unknown-unknown": "未知候选",
+        "known-unknown": "已知类型边界候选",
+        "known_unknown": "已知类型边界候选",
+        "data_issue": "数据质量风险",
+        "bridge": "桥接候选",
+        "interaction": "相互作用",
+        "red plateau": "红色平台",
+    }
+    segments: list[str] = []
+    for raw in re.split(r"[；;]\s*", str(text or "")):
+        segment = raw.strip()
+        if not segment:
+            continue
+        # Avoid leaking duplicated English memory snippets into public feedback.
+        if "||" in segment:
+            segment = segment.split("||", 1)[0].strip()
+        for old, new in replacements.items():
+            segment = re.sub(re.escape(old), new, segment, flags=re.IGNORECASE)
+        segment = re.sub(r"L\d(?:_[A-Za-z0-9]+)+", "该分组", segment)
+        segment = re.sub(r"\bGP\b", "趋势拟合", segment)
+        segment = re.sub(r"\s+", " ", segment).strip()
+        segment = segment.replace("旧候选页", "过去记录")
+        segment = segment.replace("候选页", "过去记录")
+        segment = segment.replace("查询光变", "当前光变")
+        segment = segment.replace("主当前光变", "当前光变")
+        segment = segment.replace("特征空间和锚点相似性", "特征分布相似性")
+        segment = segment.replace("未知候选 池", "未知候选池")
+        segment = segment.replace("已知类型边界候选 桥接候选", "已知类型边界桥接候选")
+        segment = segment.replace("数据质量风险 明显", "数据质量风险明显")
+        segment = segment.replace("数据质量风险 标记", "数据质量风险标记")
+        segment = segment.replace("已有 数据质量风险", "已有数据质量风险")
+        segment = segment.replace("趋势拟合 过拟合", "趋势拟合过拟合")
+        segment = segment.replace("且 数据", "且数据")
+        segment = segment.replace(" 未知候选。", "未知候选。")
+        segment = segment.replace("可保留的 已知", "可保留的已知")
+        segment = segment.replace("备选 未知", "备选未知")
+        segment = segment.replace("未知候选 快速", "未知候选，快速")
+        segment = segment.replace("该分组 桥接区", "该分组桥接区")
+        chinese_chars = sum(1 for char in segment if "\u4e00" <= char <= "\u9fff")
+        if chinese_chars < 4 and len(segment) > 18:
+            continue
+        if segment not in segments:
+            segments.append(segment)
+        if len(segments) >= limit:
+            break
+    return segments
+
+
+def transient_prior_info(source_id: str, prior_labels: dict[str, Any], feature_cards: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    manual_sources = prior_labels.get("manual_sources") if isinstance(prior_labels.get("manual_sources"), dict) else {}
+    manual = manual_sources.get(source_id) if isinstance(manual_sources.get(source_id), dict) else None
+    in_focus = source_id in prior_labels.get("focus_rendered", set())
+    in_priority = source_id in prior_labels.get("priority_candidate", set())
+    card = feature_cards.get(source_id) or {}
+    labels: list[str] = []
+    reasons: list[str] = []
+    expected_followup = in_focus or in_priority
+    if manual:
+        raw_labels = [str(label) for label in manual.get("labels") or [] if str(label or "").strip()]
+        labels.extend(transient_manual_label_text(manual, raw_labels))
+        reason = str(manual.get("reason") or "").strip()
+        check = str(manual.get("check") or "").strip()
+        if reason:
+            reasons.extend(transient_public_note_segments(reason, limit=2))
+        if check:
+            check_segments = transient_public_note_segments(check, limit=1)
+            if check_segments:
+                reasons.append("复核要点：" + check_segments[0])
+        label_text = " ".join(raw_labels).lower()
+        expected_followup = not any(token in label_text for token in ("typical", "control", "ordinary"))
+        if any(token in label_text for token in ("interesting", "bridge", "data_issue", "manual_recheck", "known_unknown", "priority", "focus")):
+            expected_followup = True
+        if not labels:
+            labels.append("Sample 人工记录")
+    if in_focus:
+        labels.append("人工复核池")
+    if in_priority:
+        labels.append("重点短表")
+    if not labels:
+        labels.append("普通池")
+    deduped_labels: list[str] = []
+    for label in labels:
+        if label not in deduped_labels:
+            deduped_labels.append(label)
+    labels = deduped_labels[:4]
+
+    if in_focus:
+        reasons.append("过去已进入人工复核渲染池")
+    if in_priority:
+        reasons.append("过去已进入重点候选短表")
+    quality_tier = card.get("quality_tier")
+    if quality_tier:
+        reasons.append(f"特征质量 {transient_quality_label(quality_tier)}")
+    for label, key in (
+        ("再亮计数", "rebrightening_completed"),
+        ("振幅", "amplitude_completed"),
+        ("峰值SNR", "peak_snr"),
+    ):
+        value = card.get(key)
+        if value not in (None, "", "0", 0):
+            reasons.append(f"{label}≈{value}")
+    if card.get("agn_evidence") or card.get("wise_agn"):
+        reasons.append("有核区/AGN上下文")
+    if card.get("gaia_is_stellar") or card.get("var_evidence"):
+        reasons.append("有恒星/变源上下文")
+    if not reasons:
+        reasons.append("未命中过去重点池")
+
+    return {
+        "labels": labels,
+        "in_manual": bool(manual),
+        "in_prior": bool(manual) or in_focus or in_priority,
+        "expected_followup": expected_followup,
+        "reason": "；".join(reasons[:4]),
+    }
+
+
+def run_103_transient_anomaly_relay(
+    item: dict[str, Any],
+    *,
+    repo_root: Path,
+    registry_entry: dict[str, Any],
+    timeout: int,
+) -> tuple[str, dict[str, Any]]:
+    submission = get_submission_post(item)
+    post_body = str(submission.get("body") or "").strip()
+    submission_post_id = str(submission.get("id") or "")
+    topic = item.get("topic") or {}
+    topic_id = str(topic.get("id") or "")
+    cabinet_source = str(get_cabinet_source(item) or registry_entry.get("source") or "")
+    runtime = registry_entry.get("runtime") or {}
+    cabinet_dir = repo_root / str(runtime.get("cwd") or "")
+    if not cabinet_dir.exists():
+        raise FileNotFoundError(f"cabinet directory not found: {cabinet_dir}")
+    if not post_body:
+        return format_wrong_evaluation(
+            cabinet_source=cabinet_source,
+            reason="帖子正文不能为空。",
+            submission_config={},
+        )
+
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        submission_path = Path(tmp) / "submission.txt"
+        submission_path.write_text(post_body + "\n", encoding="utf-8")
+        command = [
+            *resolve_cabinet_python(cabinet_dir),
+            "evaluate_submission.py",
+            "--submission",
+            str(submission_path),
+        ]
+        start = time.time()
+        completed = subprocess.run(
+            command,
+            cwd=str(cabinet_dir),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+        )
+        duration = round(time.time() - start, 3)
+
+    stdout_lines = [line for line in completed.stdout.splitlines() if line.strip()]
+    if len(stdout_lines) < 2 or stdout_lines[-1].strip() != "SUCCESS":
+        return format_evaluator_runtime_error(
+            cabinet_source=cabinet_source,
+            reason="local evaluator stdout 不符合约定：应输出 JSON 结果并以 SUCCESS 结尾。",
+            submission_config={},
+            command_executed=" ".join(command),
+            stdout_text=completed.stdout or "",
+            stderr_text=completed.stderr or "",
+            exit_code=completed.returncode,
+            duration_seconds=duration,
+        )
+
+    try:
+        payload = json.loads("\n".join(stdout_lines[:-1]))
+    except json.JSONDecodeError as exc:
+        return format_evaluator_runtime_error(
+            cabinet_source=cabinet_source,
+            reason=f"local evaluator JSON 解析失败: {exc}",
+            submission_config={},
+            command_executed=" ".join(command),
+            stdout_text=completed.stdout or "",
+            stderr_text=completed.stderr or "",
+            exit_code=completed.returncode,
+            duration_seconds=duration,
+        )
+
+    rows = payload.get("results") or []
+    if not isinstance(rows, list):
+        rows = []
+    coverage = update_transient_relay_coverage(
+        repo_root=repo_root,
+        cabinet_dir=cabinet_dir,
+        submission_post_id=submission_post_id,
+        topic_id=topic_id,
+        rows=rows,
+    )
+    coverage_rows = coverage.get("rows") if isinstance(coverage.get("rows"), list) else []
+    prior_labels = load_transient_prior_labels(cabinet_dir)
+    feature_cards = load_transient_feature_cards(cabinet_dir)
+    raw_points = 0
+    max_raw_points = max(len(rows), 5) * 7
+    effective_points = 0
+    max_effective_points = max(len(rows), 5) * 2
+    followup_sources: list[str] = []
+    prior_hits: list[dict[str, Any]] = []
+    manual_hits: list[dict[str, Any]] = []
+    ordinary_matches: list[str] = []
+    detail_rows: list[dict[str, Any]] = []
+    if payload.get("ok"):
+        accepted_line = f"已接收 {payload.get('line_count')}/5 行结构化判读。"
+    else:
+        accepted_line = "提交没有通过格式校验，请按题目要求重交 5 行。"
+    for idx, row in enumerate(rows):
+        coverage_row = coverage_rows[idx] if idx < len(coverage_rows) else {}
+        points, notes = score_transient_row(row, coverage_row)
+        raw_points += points
+        coverage_label = "首次覆盖" if coverage_row.get("is_new_coverage") else "重复覆盖"
+        errors = row.get("errors") if isinstance(row.get("errors"), list) else []
+        source_id = transient_row_source_id(row)
+        followup = transient_participant_followup(row) if row.get("ok") else False
+        prior = transient_prior_info(source_id, prior_labels, feature_cards)
+        if row.get("ok") and followup:
+            followup_sources.append(source_id)
+        effective_note = "待专家复核"
+        effective_delta = 0
+        expected_followup = bool(prior.get("expected_followup"))
+        if row.get("ok") and prior["in_prior"] and followup == expected_followup:
+            effective_delta = 2
+            effective_note = "匹配 Sample 记录" if prior.get("in_manual") else "命中过去重点"
+            prior_hits.append({"source_id": source_id, "prior": prior})
+            if prior.get("in_manual"):
+                manual_hits.append({"source_id": source_id, "prior": prior})
+        elif row.get("ok") and not followup and not prior["in_prior"]:
+            effective_delta = 2
+            effective_note = "普通判断一致"
+            ordinary_matches.append(source_id)
+        elif row.get("ok") and followup:
+            effective_note = "新增候选，待复核"
+        elif row.get("ok") and prior["in_prior"]:
+            effective_note = "与 Sample 记录不一致"
+        effective_points += effective_delta
+        detail_rows.append(
+            {
+                "line": row.get("line"),
+                "source_id": source_id or "-",
+                "status": "有效" if row.get("ok") else "未通过",
+                "coverage": coverage_label,
+                "role": transient_role_label(row.get("role")),
+                "anomaly_score": row.get("anomaly_score"),
+                "points": points,
+                "effective_delta": effective_delta,
+                "effective_note": effective_note,
+                "prior_label": "、".join(prior["labels"]),
+                "prior_reason": prior["reason"],
+                "notes": "、".join(notes) if notes else ("；".join(str(err) for err in errors) if errors else "-"),
+            }
+        )
+    score_100 = round(raw_points / max_raw_points * 100, 1) if max_raw_points else 0
+    effective_score_100 = round(effective_points / max_effective_points * 100, 1) if max_effective_points else 0
+    summary_lines = [
+        "### 本轮评测",
+        "",
+        "| 项目 | 结果 |",
+        "| --- | --- |",
+        f"| 结构化行数 | {markdown_cell(accepted_line, limit=90)} |",
+        f"| 公开分 | {raw_points}/{max_raw_points}，计入即时参与榜 |",
+        f"| 有效榜暂记 | {effective_points}/{max_effective_points}，专家定期复核后更新 |",
+        f"| 建议回看 | {len(followup_sources)} 张"
+        + (f"：{markdown_cell(', '.join(followup_sources[:8]), limit=80)} |" if followup_sources else " |"),
+        f"| Sample 交叉 | 匹配人工记录 {len(manual_hits)} 张；命中过去重点 {len(prior_hits)} 张；普通一致 {len(ordinary_matches)} 张 |",
+        "",
+        "评测说明：本回复由规则评测器生成，只检查提交格式、覆盖状态、判读自洽性和 Sample 记录交叉；不调用大模型。",
+    ]
+    summary_lines.extend(transient_evaluation_table(detail_rows))
+    if coverage.get("is_replay"):
+        summary_lines.append("")
+        summary_lines.append("说明：这条 submission_post 已处理过，覆盖状态未重复累计。")
+    elif coverage.get("total_pool"):
+        summary_lines.append("")
+        summary_lines.append(
+            "覆盖进度："
+            f"{coverage.get('covered_total')}/{coverage.get('total_pool')} "
+            f"(本帖新增 {coverage.get('newly_covered_count')}/5, 剩余 {coverage.get('remaining_unseen')})"
+        )
+    next_batch = coverage.get("next_batch") if isinstance(coverage.get("next_batch"), list) else []
+    if next_batch:
+        summary_lines.append("下一批建议样本：")
+        summary_lines.extend(f"![]({url})" for url in next_batch)
+
+    body = "\n".join(summary_lines)
+    result = {
+        "passed": bool(payload.get("ok")) and completed.returncode == 0,
+        "score": score_100,
+        "feedback": body,
+        "cabinet": cabinet_source,
+        "raw_points": raw_points,
+        "max_raw_points": max_raw_points,
+        "effective_points": effective_points,
+        "max_effective_points": max_effective_points,
+        "effective_score_100": effective_score_100,
+        "rows": rows,
+        "coverage": coverage,
+        "command_executed": " ".join(command),
+        "exit_code": completed.returncode,
+        "duration_seconds": duration,
+        "stderr_tail": truncate_stderr(completed.stderr),
+    }
+    return body, result
+
+
 BUILTIN_RUNNERS = {
     "builtin:101-cifar": run_101_cifar,
     "builtin:102-variable-star-relay": run_102_variable_star_relay,
+    "builtin:103-transient-anomaly-relay": run_103_transient_anomaly_relay,
 }
 
 

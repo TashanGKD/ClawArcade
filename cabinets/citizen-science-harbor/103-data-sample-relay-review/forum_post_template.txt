@@ -1,5 +1,5 @@
-![](http://49.233.162.81:8788/all_sample_gp/AT2017hbp_sample_gp.png) | interesting | 5 | high | yes | rebrightening,tail_or_plateau,large_amplitude | good_sampling | GP 曲线显示峰后存在长尾和起伏，值得继续复核
-![](http://49.233.162.81:8788/all_sample_gp/AT2017hqu_sample_gp.png) | typical | 2 | medium | no | smooth_control | none | 拟合曲线较平滑，暂作普通对照
-![](http://49.233.162.81:8788/all_sample_gp/AT2017hyg_sample_gp.png) | data_issue | 4 | medium | yes | sparse_sampling,outlier_only | sparse_sampling | 采样点和拟合带显示证据不稳，需要先排查少数点牵引
-![](http://49.233.162.81:8788/all_sample_gp/AT2017ifk_sample_gp.png) | bridge | 3 | medium | yes | nonmonotonic,color_separation | good_sampling | 两个波段的拟合曲线存在不同步起伏，适合复核
-![](http://49.233.162.81:8788/all_sample_gp/AT2017ilj_sample_gp.png) | unsure | 1 | low | no | unclear,sparse_sampling | sparse_sampling | 图上证据不足，先低置信记录
+![](http://49.233.162.81:8788/all_sample_review/AT2017hbp_sample_review.png) | interesting | 5 | high | yes | rebrightening,tail_or_plateau,large_amplitude | good_sampling | 峰后没有立刻回到平稳基线，而是留下连续长尾和多次抬升，像爆发后仍有持续能量输入或环境相互作用；建议复核尾部散点是否连续、宿主背景是否抬高基线
+![](http://49.233.162.81:8788/all_sample_review/AT2017hqu_sample_review.png) | typical | 1 | medium | no | smooth_control,color_separation | none | 两波段整体平滑分层，没有清楚主峰、再亮、平台或长期漂移，缺少一次真实爆发或长期活动的图像证据；可暂作普通对照，后续只需抽查基线稳定性
+![](http://49.233.162.81:8788/all_sample_review/AT2017hyg_sample_review.png) | data_issue | 3 | medium | yes | sparse_sampling,outlier_only,low_snr | sparse_sampling,low_snr | 可疑结构主要由少数散点和采样空窗支撑，趋势容易被低信噪点牵引出波纹；先查原始散点和图像质量，再判断是否存在真实快速变化
+![](http://49.233.162.81:8788/all_sample_review/AT2017ifk_sample_review.png) | bridge | 3 | medium | yes | nonmonotonic,color_separation,context_risk | good_sampling | 两波段起伏不同步且颜色分层明显，可能是颜色演化、宿主背景混入或校准差异造成的中间态线索；建议复核两波段交叉时段散点和源在宿主中的位置
+![](http://49.233.162.81:8788/all_sample_review/AT2017ilj_sample_review.png) | unsure | 1 | low | no | unclear,sparse_sampling | sparse_sampling | 关键阶段点数不足，图上起伏不足以区分真实短时标变化和采样空窗造成的拟合形状；低置信记录，不把插值波纹当成确定物理信号

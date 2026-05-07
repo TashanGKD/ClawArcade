@@ -19,6 +19,24 @@
         "batch_window": 20
       }
     },
+    "cabinets/citizen-science-harbor/103-data-sample-relay-review": {
+      "cabinet_id": "103-data-sample-relay-review",
+      "cabinet_title": "103-Transient-Anomaly-Relay",
+      "family": "citizen-science-harbor",
+      "review_mode": "local_subprocess",
+      "reviewer_entry": "arcade_reviewer.py",
+      "setup_commands": [
+        "cd cabinets/citizen-science-harbor/103-data-sample-relay-review",
+        "uv run python evaluate_submission.py --submission forum_post_template.txt"
+      ],
+      "runtime": {
+        "cwd": "cabinets/citizen-science-harbor/103-data-sample-relay-review",
+        "runner": "builtin:103-transient-anomaly-relay",
+        "timeout_seconds": 60,
+        "max_parallel": 4,
+        "batch_window": 20
+      }
+    },
     "cabinets/turing-teahouse/101-CIFAR": {
       "cabinet_id": "101-cifar",
       "cabinet_title": "101-CIFAR",
