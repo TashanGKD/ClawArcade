@@ -47,6 +47,11 @@ LOG_PATHS = [
     ROOT.parent / "data-sample-http-8788.err.log",
 ]
 DEFAULT_CLAIM_TTL_SECONDS = 6 * 60 * 60
+DEFAULT_TOPICLAB_BASE_URL = os.environ.get("TOPICLAB_BASE_URL", "https://world.tashan.chat").rstrip("/")
+DEFAULT_TOPICLAB_ARCADE_TOPIC_ID = os.environ.get(
+    "TOPICLAB_ARCADE_TOPIC_ID",
+    "01d69d74-7555-4af9-9141-d3723f21dc5f",
+).strip()
 
 ALLOWED_ROLES = {"interesting", "bridge", "data_issue", "typical", "control", "unsure"}
 ALLOWED_CONFIDENCE = {"high", "medium", "low"}
@@ -288,6 +293,31 @@ manifest_key_cache: dict[str, dict[str, Any]] | None = None
 feature_cards_cache: dict[str, dict[str, Any]] | None = None
 focus_source_cache: set[str] | None = None
 priority_source_cache: set[str] | None = None
+
+
+def topiclab_submission_contract() -> dict[str, Any]:
+    """Machine-readable handoff from this data API to TopicLab Arcade."""
+
+    topic_path = (
+        f"/api/v1/openclaw/topics/{DEFAULT_TOPICLAB_ARCADE_TOPIC_ID}/posts"
+        if DEFAULT_TOPICLAB_ARCADE_TOPIC_ID
+        else "/api/v1/openclaw/topics/{topic_id}/posts"
+    )
+    topic_url = f"{DEFAULT_TOPICLAB_BASE_URL}{topic_path}"
+    return {
+        "official_submission_surface": "TopicLab Arcade branch",
+        "submit_to": "TopicLab Arcade branch reply",
+        "openclaw_endpoint": topic_path,
+        "openclaw_url": topic_url,
+        "topic_id": DEFAULT_TOPICLAB_ARCADE_TOPIC_ID or None,
+        "method": "POST",
+        "deprecated_data_submit_endpoint": "/api/submit",
+        "note": (
+            "This data service only assigns images. Submit the five-line answer "
+            "through the TopicLab OpenClaw Arcade endpoint; reviewer feedback and "
+            "official scoring are written back to the TopicLab branch."
+        ),
+    }
 
 
 def now_iso() -> str:
@@ -1241,6 +1271,7 @@ def status_payload(state: dict[str, Any]) -> dict[str, Any]:
     assigned = historically_claimed_keys(state)
     effective_seen = covered | assigned
     next_batch, next_items, next_mode = select_claim_items(state, skip_seen_logs=False)
+    contract = topiclab_submission_contract()
     return {
         "ok": True,
         "task_id": manifest.get("task_id", "103-data-sample-relay-review"),
@@ -1256,6 +1287,15 @@ def status_payload(state: dict[str, Any]) -> dict[str, Any]:
         "effective_seen_rate": round(len(effective_seen) / pool_size, 6) if pool_size else 0,
         "claim_count": len(state.get("claims", {})),
         "submission_count": len(state.get("submissions", [])),
+        "local_legacy_submission_count": len(state.get("submissions", [])),
+        "topiclab_submission_count": None,
+        "submission_count_note": (
+            "submission_count is legacy local /api/submit history only. Official "
+            "submissions and reviewer feedback live in TopicLab Arcade branches."
+        ),
+        "official_submission_surface": contract["official_submission_surface"],
+        "openclaw_endpoint": contract["openclaw_endpoint"],
+        "openclaw_url": contract["openclaw_url"],
         "updated_at": state.get("updated_at"),
         "next_batch": next_batch,
         "next_claim_mode": next_mode,
@@ -1558,9 +1598,8 @@ def make_claim(body: dict[str, Any]) -> dict[str, Any]:
         "batch_number": batch_number,
         "claim_mode": claim_mode,
         "items": items,
-        "submit_to": "TopicLab Arcade branch reply",
+        **topiclab_submission_contract(),
         "output_format": "![](image_url) | role | anomaly_score | confidence | needs_followup | evidence_tags | quality_flags | reason",
-        "note": "This service only assigns images. Submit the five-line answer in the TopicLab Arcade branch.",
     }
 
 
@@ -2277,10 +2316,21 @@ class RelayHandler(SimpleHTTPRequestHandler):
                 self.write_json(make_claim(body))
                 return
             if parsed.path == "/api/submit":
+                contract = topiclab_submission_contract()
                 self.write_json(
                     {
                         "ok": False,
-                        "error": "submit in the TopicLab Arcade branch; this data service only assigns images",
+                        "error": (
+                            "/api/submit is deprecated. Submit in the TopicLab Arcade "
+                            "branch through the OpenClaw endpoint; this data service "
+                            "only assigns images."
+                        ),
+                        "deprecated": True,
+                        "official_submission_surface": contract["official_submission_surface"],
+                        "openclaw_endpoint": contract["openclaw_endpoint"],
+                        "openclaw_url": contract["openclaw_url"],
+                        "topic_id": contract["topic_id"],
+                        "method": contract["method"],
                     },
                     status=HTTPStatus.GONE,
                 )
