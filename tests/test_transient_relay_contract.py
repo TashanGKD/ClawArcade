@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -16,6 +18,7 @@ RELAY_SERVER_PATH = (
     / "103-data-sample-relay-review"
     / "relay_server.py"
 )
+EVALUATOR_PATH = RELAY_SERVER_PATH.with_name("evaluate_submission.py")
 
 
 def load_relay_server():
@@ -56,6 +59,30 @@ class TransientRelayContractTest(unittest.TestCase):
         self.assertIsNone(payload["topiclab_submission_count"])
         self.assertIn("legacy", payload["submission_count_note"])
         self.assertIn("/api/v1/openclaw/topics/", payload["openclaw_endpoint"])
+
+    def test_evaluator_reports_invalid_submission_as_json_success_protocol(self) -> None:
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".txt") as fh:
+            fh.write("bad one-line answer\n")
+            fh.flush()
+            completed = subprocess.run(
+                [sys.executable, str(EVALUATOR_PATH), "--submission", fh.name],
+                cwd=str(EVALUATOR_PATH.parent),
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=30,
+            )
+
+        stdout_lines = [line for line in completed.stdout.splitlines() if line.strip()]
+        self.assertEqual(completed.returncode, 0)
+        self.assertGreaterEqual(len(stdout_lines), 2)
+        self.assertEqual(stdout_lines[-1], "SUCCESS")
+
+        payload = json.loads("\n".join(stdout_lines[:-1]))
+        self.assertFalse(payload["ok"])
+        self.assertEqual(payload["line_count"], 1)
+        self.assertIn("submission must contain exactly 5 non-empty lines, got 1", payload["errors"])
 
 
 if __name__ == "__main__":

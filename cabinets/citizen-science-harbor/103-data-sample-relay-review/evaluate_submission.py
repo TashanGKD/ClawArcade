@@ -198,8 +198,10 @@ def main() -> int:
             indent=2,
         )
     )
-    print("SUCCESS" if ok else "ERROR")
-    return 0 if ok else 1
+    # The reviewer protocol reserves missing SUCCESS/non-zero exits for evaluator
+    # runtime failures. Invalid submissions are reported inside the JSON payload.
+    print("SUCCESS")
+    return 0
 
 
 if __name__ == "__main__":
