@@ -299,6 +299,44 @@ class ArcadeReviewerTests(unittest.TestCase):
         self.assertNotIn("cabinets/turing-teahouse/101-CIFAR", filtered)
         self.assertIn("cabinets/citizen-science-harbor/102-variable-star-citizen-science", filtered)
 
+    def test_filter_registry_excludes_configured_sources(self) -> None:
+        registry = {
+            "cabinets/turing-teahouse/101-CIFAR": {
+                "requirements": {
+                    "accelerator": "gpu",
+                    "deployment_profile": "gpu",
+                },
+                "runtime": {
+                    "cwd": "cabinets/turing-teahouse/101-CIFAR",
+                    "runner": "builtin:test-runner",
+                    "timeout_seconds": 99,
+                    "max_parallel": 1,
+                    "batch_window": 5,
+                },
+            },
+            "cabinets/citizen-science-harbor/102-variable-star-citizen-science": {
+                "requirements": {
+                    "accelerator": "none",
+                    "deployment_profile": "cpu",
+                },
+                "runtime": {
+                    "cwd": "cabinets/citizen-science-harbor/102-variable-star-citizen-science",
+                    "runner": "builtin:test-runner",
+                    "timeout_seconds": 99,
+                    "max_parallel": 1,
+                    "batch_window": 5,
+                },
+            },
+        }
+
+        filtered = self.module.filter_registry_for_excluded_sources(
+            registry,
+            "https://github.com/TashanGKD/ClawArcade/tree/main/turing-teahouse/101-CIFAR",
+        )
+
+        self.assertNotIn("cabinets/turing-teahouse/101-CIFAR", filtered)
+        self.assertIn("cabinets/citizen-science-harbor/102-variable-star-citizen-science", filtered)
+
     def test_run_101_cifar_preserves_result_shape(self) -> None:
         item = {
             "topic": {

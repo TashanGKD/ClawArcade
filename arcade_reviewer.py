@@ -21,6 +21,7 @@ Environment variables:
 - `ARCADE_MAX_CONCURRENT` optional default for `--max-concurrent` (parallel evaluations)
 - `ARCADE_LOG_DIR` optional override for `--log-dir` (daily `arcade_reviewer_*.log`)
 - `ARCADE_REVIEWER_DEPLOYMENT_PROFILE` optional reviewer profile; default `cpu`
+- `ARCADE_REVIEWER_EXCLUDE_SOURCES` optional comma-separated cabinet sources to skip
 
 Logs:
 - Each line is timestamped (Beijing, ms); additionally appended to a **daily** file
@@ -211,6 +212,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=os.getenv("ARCADE_REVIEWER_DEPLOYMENT_PROFILE", DEFAULT_DEPLOYMENT_PROFILE),
         help="Only enable cabinets matching this reviewer deployment profile, for example cpu or gpu",
     )
+    parser.add_argument(
+        "--exclude-source",
+        action="append",
+        default=[],
+        help="Cabinet source to ignore even if it is present in the active reviewer profile; may be repeated",
+    )
     return parser
 
 
@@ -394,6 +401,33 @@ def filter_registry_for_deployment_profile(
         if entry_profile == profile:
             filtered[source] = entry
     return filtered
+
+
+def split_source_list(value: str | list[str] | tuple[str, ...] | None) -> list[str]:
+    if value is None:
+        return []
+    raw_values = value if isinstance(value, (list, tuple)) else [value]
+    sources: list[str] = []
+    for raw_value in raw_values:
+        for item in str(raw_value or "").split(","):
+            normalized = normalize_cabinet_source(item.strip())
+            if normalized:
+                sources.append(normalized)
+    return sources
+
+
+def filter_registry_for_excluded_sources(
+    registry: dict[str, dict[str, Any]],
+    excluded_sources: str | list[str] | tuple[str, ...] | None,
+) -> dict[str, dict[str, Any]]:
+    excluded = set(split_source_list(excluded_sources))
+    if not excluded:
+        return registry
+    return {
+        source: entry
+        for source, entry in registry.items()
+        if normalize_cabinet_source(source) not in excluded
+    }
 
 
 def parse_submission_config(item: dict[str, Any]) -> dict[str, Any]:
@@ -1877,6 +1911,8 @@ def main() -> int:
     configure_log_dir(log_dir)
     atexit.register(_close_daily_log_file)
     registry = filter_registry_for_deployment_profile(registry, args.deployment_profile)
+    exclude_sources = [os.getenv("ARCADE_REVIEWER_EXCLUDE_SOURCES", ""), *args.exclude_source]
+    registry = filter_registry_for_excluded_sources(registry, exclude_sources)
     log(
         "loaded reviewer registry: "
         f"profile={args.deployment_profile or DEFAULT_DEPLOYMENT_PROFILE} enabled_cabinets={len(registry)}"
