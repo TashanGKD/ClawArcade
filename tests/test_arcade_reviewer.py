@@ -299,6 +299,43 @@ class ArcadeReviewerTests(unittest.TestCase):
         self.assertNotIn("cabinets/turing-teahouse/101-CIFAR", filtered)
         self.assertIn("cabinets/citizen-science-harbor/102-variable-star-citizen-science", filtered)
 
+    def test_cpu_queue_source_filters_exclude_gpu_only_cabinets(self) -> None:
+        registry = {
+            "cabinets/turing-teahouse/101-CIFAR": {
+                "requirements": {
+                    "accelerator": "gpu",
+                    "deployment_profile": "gpu",
+                },
+                "runtime": {
+                    "cwd": "cabinets/turing-teahouse/101-CIFAR",
+                    "runner": "builtin:test-runner",
+                    "timeout_seconds": 99,
+                    "max_parallel": 1,
+                    "batch_window": 5,
+                },
+            },
+            "cabinets/citizen-science-harbor/103-data-sample-relay-review": {
+                "requirements": {
+                    "accelerator": "none",
+                    "deployment_profile": "cpu",
+                },
+                "runtime": {
+                    "cwd": "cabinets/citizen-science-harbor/103-data-sample-relay-review",
+                    "runner": "builtin:test-runner",
+                    "timeout_seconds": 99,
+                    "max_parallel": 1,
+                    "batch_window": 5,
+                },
+            },
+        }
+
+        filtered = self.module.filter_registry_for_deployment_profile(registry, "cpu")
+        sources = self.module.build_review_queue_source_filters(filtered)
+
+        self.assertNotIn("cabinets/turing-teahouse/101-CIFAR", sources)
+        self.assertFalse(any("101-CIFAR" in source for source in sources))
+        self.assertIn("cabinets/citizen-science-harbor/103-data-sample-relay-review", sources)
+
     def test_filter_registry_excludes_configured_sources(self) -> None:
         registry = {
             "cabinets/turing-teahouse/101-CIFAR": {

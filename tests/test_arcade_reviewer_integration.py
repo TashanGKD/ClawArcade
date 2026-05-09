@@ -238,6 +238,10 @@ class ArcadeReviewerIntegrationTests(unittest.TestCase):
             )
 
         self.assertEqual(completed.returncode, 0, msg=completed.stderr or completed.stdout)
+        get_paths = [path for method, path in server.requests if method == "GET"]
+        self.assertEqual(len(get_paths), 1)
+        params = parse_qs(urlparse(get_paths[0]).query)
+        self.assertIn("cabinets/turing-teahouse/101-CIFAR", params.get("source", []))
         self.assertEqual(len(server.evaluations), 1)
         evaluation = server.evaluations[0]["payload"]
         self.assertEqual(evaluation["for_post_id"], "submission-1")

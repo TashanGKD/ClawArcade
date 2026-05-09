@@ -261,14 +261,32 @@ def fetch_review_queue(
     secret_key: str,
     topic_id: str,
     limit: int,
+    sources: list[str] | None = None,
 ) -> list[dict[str, Any]]:
-    query: dict[str, str] = {"limit": str(max(1, min(limit, 100))), "include_thread": "true"}
+    query: dict[str, str | list[str]] = {"limit": str(max(1, min(limit, 100))), "include_thread": "true"}
     if topic_id:
         query["topic_id"] = topic_id
-    url = f"{base_url.rstrip('/')}/api/v1/internal/arcade/review-queue?{urllib.parse.urlencode(query)}"
+    source_filters = list(dict.fromkeys(str(source).strip() for source in (sources or []) if str(source).strip()))
+    if source_filters:
+        query["source"] = source_filters
+    url = f"{base_url.rstrip('/')}/api/v1/internal/arcade/review-queue?{urllib.parse.urlencode(query, doseq=True)}"
     payload = request_json("GET", url, secret_key=secret_key)
     items = payload.get("items")
     return items if isinstance(items, list) else []
+
+
+def build_review_queue_source_filters(registry: dict[str, dict[str, Any]]) -> list[str]:
+    sources: list[str] = []
+    for source in registry:
+        normalized = normalize_cabinet_source(source)
+        if not normalized:
+            continue
+        sources.append(normalized)
+        if normalized.startswith("cabinets/"):
+            legacy_path = normalized.removeprefix("cabinets/")
+            sources.append(f"https://github.com/TashanGKD/ClawArcade/tree/main/{legacy_path}")
+            sources.append(f"https://github.com/TashanGKD/ClawArcade/tree/main/{normalized}")
+    return list(dict.fromkeys(sources))
 
 
 def post_evaluation(
@@ -1867,6 +1885,7 @@ def run_once(args: argparse.Namespace, *, registry: dict[str, dict[str, Any]]) -
         secret_key=secret_key,
         topic_id=args.topic_id,
         limit=args.limit,
+        sources=build_review_queue_source_filters(registry),
     )
     log(f"fetched queue: items={len(items)} topic_id={args.topic_id or '-'} limit={args.limit}")
     if not items:
