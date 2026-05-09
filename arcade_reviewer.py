@@ -20,6 +20,7 @@ Environment variables:
 - `ARCADE_EVALUATOR_SECRET_KEY` required unless `--secret-key` is passed
 - `ARCADE_MAX_CONCURRENT` optional default for `--max-concurrent` (parallel evaluations)
 - `ARCADE_LOG_DIR` optional override for `--log-dir` (daily `arcade_reviewer_*.log`)
+- `ARCADE_REVIEWER_DEPLOYMENT_PROFILE` optional reviewer profile; default `cpu`
 
 Logs:
 - Each line is timestamped (Beijing, ms); additionally appended to a **daily** file
@@ -61,6 +62,7 @@ DEFAULT_BASE_URL = "http://127.0.0.1:8001"
 DEFAULT_TIMEOUT_SECONDS = 60 * 30
 DEFAULT_MAX_CONCURRENT = 3
 DEFAULT_REVIEWER_REGISTRY = "generated/reviewer_registry.json"
+DEFAULT_DEPLOYMENT_PROFILE = "cpu"
 
 _LOG_TZ = ZoneInfo("Asia/Shanghai")
 
@@ -204,6 +206,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--once", action="store_true", help="Process the queue once and exit")
     parser.add_argument("--loop", action="store_true", help="Keep polling until interrupted")
     parser.add_argument("--dry-run", action="store_true", help="Do not execute or post evaluations")
+    parser.add_argument(
+        "--deployment-profile",
+        default=os.getenv("ARCADE_REVIEWER_DEPLOYMENT_PROFILE", DEFAULT_DEPLOYMENT_PROFILE),
+        help="Only enable cabinets matching this reviewer deployment profile, for example cpu or gpu",
+    )
     return parser
 
 
@@ -345,19 +352,48 @@ def load_reviewer_registry(path: Path) -> dict[str, dict[str, Any]]:
             raise ValueError(f"invalid reviewer registry entry for {source!r} in {path}")
         runtime = entry.get("runtime")
         setup_commands = entry.get("setup_commands")
+        requirements = entry.get("requirements") or {
+            "accelerator": "none",
+            "deployment_profile": DEFAULT_DEPLOYMENT_PROFILE,
+        }
         runner = runtime.get("runner") if isinstance(runtime, dict) else None
         cwd = runtime.get("cwd") if isinstance(runtime, dict) else None
+        deployment_profile = requirements.get("deployment_profile") if isinstance(requirements, dict) else None
+        accelerator = requirements.get("accelerator") if isinstance(requirements, dict) else None
         if not isinstance(runner, str) or not runner.strip():
             raise ValueError(f"invalid reviewer runtime runner for {source!r} in {path}")
         if not isinstance(cwd, str) or not cwd.strip():
             raise ValueError(f"invalid reviewer runtime cwd for {source!r} in {path}")
+        if not isinstance(deployment_profile, str) or not deployment_profile.strip():
+            raise ValueError(f"invalid reviewer deployment_profile for {source!r} in {path}")
+        if not isinstance(accelerator, str) or not accelerator.strip():
+            raise ValueError(f"invalid reviewer accelerator requirement for {source!r} in {path}")
         if setup_commands is not None and (
             not isinstance(setup_commands, list)
             or any(not isinstance(command, str) or not command.strip() for command in setup_commands)
         ):
             raise ValueError(f"invalid reviewer setup_commands for {source!r} in {path}")
-        normalized[source] = entry
+        normalized_entry = dict(entry)
+        normalized_entry["requirements"] = dict(requirements)
+        normalized[source] = normalized_entry
     return normalized
+
+
+def filter_registry_for_deployment_profile(
+    registry: dict[str, dict[str, Any]],
+    deployment_profile: str,
+) -> dict[str, dict[str, Any]]:
+    profile = str(deployment_profile or DEFAULT_DEPLOYMENT_PROFILE).strip().lower()
+    if not profile:
+        profile = DEFAULT_DEPLOYMENT_PROFILE
+
+    filtered: dict[str, dict[str, Any]] = {}
+    for source, entry in registry.items():
+        requirements = entry.get("requirements") or {}
+        entry_profile = str(requirements.get("deployment_profile") or DEFAULT_DEPLOYMENT_PROFILE).strip().lower()
+        if entry_profile == profile:
+            filtered[source] = entry
+    return filtered
 
 
 def parse_submission_config(item: dict[str, Any]) -> dict[str, Any]:
@@ -1840,6 +1876,11 @@ def main() -> int:
         raise SystemExit(f"failed to load reviewer registry {registry_path}: {exc}") from exc
     configure_log_dir(log_dir)
     atexit.register(_close_daily_log_file)
+    registry = filter_registry_for_deployment_profile(registry, args.deployment_profile)
+    log(
+        "loaded reviewer registry: "
+        f"profile={args.deployment_profile or DEFAULT_DEPLOYMENT_PROFILE} enabled_cabinets={len(registry)}"
+    )
 
     if args.loop and args.once:
         raise SystemExit("Use either --once or --loop, not both.")

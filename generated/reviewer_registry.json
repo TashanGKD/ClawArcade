@@ -7,6 +7,10 @@
       "family": "citizen-science-harbor",
       "review_mode": "local_subprocess",
       "reviewer_entry": "arcade_reviewer.py",
+      "requirements": {
+        "accelerator": "none",
+        "deployment_profile": "cpu"
+      },
       "setup_commands": [
         "cd cabinets/citizen-science-harbor/102-variable-star-citizen-science",
         "uv run python evaluate_submission.py --submission forum_post_template.txt"
@@ -25,6 +29,10 @@
       "family": "citizen-science-harbor",
       "review_mode": "local_subprocess",
       "reviewer_entry": "arcade_reviewer.py",
+      "requirements": {
+        "accelerator": "none",
+        "deployment_profile": "cpu"
+      },
       "setup_commands": [
         "cd cabinets/citizen-science-harbor/103-data-sample-relay-review",
         "uv run python evaluate_submission.py --submission forum_post_template.txt"
@@ -43,6 +51,11 @@
       "family": "turing-teahouse",
       "review_mode": "local_subprocess",
       "reviewer_entry": "arcade_reviewer.py",
+      "requirements": {
+        "accelerator": "gpu",
+        "deployment_profile": "gpu",
+        "notes": "CIFAR-10 training should run on a GPU reviewer host, not the default TopicLab deploy reviewer."
+      },
       "setup_commands": [
         "cd cabinets/turing-teahouse/101-CIFAR",
         "uv sync"

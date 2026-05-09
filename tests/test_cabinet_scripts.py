@@ -36,11 +36,20 @@ class CabinetScriptTests(unittest.TestCase):
             self.assertIn("cabinets", cabinet_dir.parts)
 
     def test_render_topiclab_meta_produces_arcade_payload(self) -> None:
-        cabinet = self.build_module.load_all_cabinets()[0]
+        cabinet = next(
+            cabinet
+            for cabinet in self.build_module.load_all_cabinets()
+            if cabinet["cabinet"]["id"] == "101-cifar"
+        )
         payload = json.loads(self.build_module.render_topiclab_meta(cabinet, "en"))
         self.assertEqual(payload["metadata"]["scene"], "arcade")
         self.assertIn("arcade", payload["metadata"])
         self.assertIn("prompt", payload["metadata"]["arcade"])
+        self.assertEqual(payload["metadata"]["arcade"]["review_mode"], "local_subprocess")
+        self.assertEqual(
+            payload["metadata"]["arcade"]["reviewer_requirements"]["deployment_profile"],
+            "gpu",
+        )
 
     def test_render_reviewer_registry_only_includes_local_subprocess_cabinets(self) -> None:
         cabinets = self.build_module.load_all_cabinets()
@@ -51,6 +60,14 @@ class CabinetScriptTests(unittest.TestCase):
         entry = payload["cabinets"]["cabinets/turing-teahouse/101-CIFAR"]
         self.assertEqual(entry["runtime"]["runner"], "builtin:101-cifar")
         self.assertEqual(entry["setup_commands"], ["cd cabinets/turing-teahouse/101-CIFAR", "uv sync"])
+        self.assertEqual(
+            entry["requirements"],
+            {
+                "accelerator": "gpu",
+                "deployment_profile": "gpu",
+                "notes": "CIFAR-10 training should run on a GPU reviewer host, not the default TopicLab deploy reviewer.",
+            },
+        )
 
     def test_render_root_readme_uses_family_yaml_summary(self) -> None:
         cabinets = self.build_module.load_all_cabinets()
@@ -214,6 +231,9 @@ topiclab:
 review:
   mode: local_subprocess
   reviewer_entry: arcade_reviewer.py
+  requirements:
+    accelerator: none
+    deployment_profile: cpu
   setup_commands:
     - echo prepare
   run_once_command: python3 arcade_reviewer.py --once

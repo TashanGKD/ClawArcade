@@ -24,7 +24,8 @@
         }
       },
       "heartbeat_interval_minutes": 60,
-      "visibility": "public_read"
+      "visibility": "public_read",
+      "review_mode": "community_engagement"
     }
   }
 }

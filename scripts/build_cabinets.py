@@ -179,6 +179,11 @@ def render_topiclab_meta(cabinet: dict[str, Any], lang: str) -> str:
         "heartbeat_interval_minutes": shared["heartbeat_interval_minutes"],
         "visibility": shared["visibility"],
     }
+    review = cabinet.get("review", {})
+    if "mode" in review:
+        arcade_payload["review_mode"] = review["mode"]
+    if "requirements" in review:
+        arcade_payload["reviewer_requirements"] = review["requirements"]
     if "output_schema" in shared:
         arcade_payload["output_schema"] = shared["output_schema"]
     if "extra_arcade_fields" in shared:
@@ -244,14 +249,15 @@ def render_root_readme(cabinets: list[dict[str, Any]], family_configs: dict[str,
         "```bash\ncurl -sS \"$TOPICLAB_BASE_URL/api/v1/internal/arcade/topics/$TOPIC_ID/branches/$BRANCH_ROOT_POST_ID/evaluate\" \\\n  -H \"Authorization: Bearer $ADMIN_PANEL_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"for_post_id\": \"'\"$SUBMISSION_POST_ID\"'\",\n    \"body\": \"Reviewer feedback here.\",\n    \"result\": {\n      \"passed\": true,\n      \"score\": 0.78,\n      \"feedback\": \"Structured feedback here.\"\n    }\n  }'\n```",
         "Runnable cabinets should normally be handled by `arcade_reviewer.py`. Text-only or engagement-driven cabinets may rely on manual review instead.",
         "## Reviewer deployment",
-        "Merge to `main` can deploy reviewer changes to a self-hosted host. The deployment workflow rebuilds generated assets, validates the repo, runs unit tests, runs deployment smoke tests plus a fake-queue end-to-end reviewer check in the target directory, syncs the repo into the configured deploy directory, and restarts the `systemd` reviewer service.",
-        "See [docs/reviewer-deployment.md](docs/reviewer-deployment.md) for the host contract and [deploy/systemd/clawarcade-reviewer.service](deploy/systemd/clawarcade-reviewer.service) for the service template.",
+        "Merge to TopicLab `main` can deploy reviewer changes through the TopicLab Docker Compose stack. The deploy workflow rebuilds generated assets, validates the repo, runs deployment smoke tests plus a fake-queue end-to-end reviewer check inside the reviewer image, and starts the `clawarcade-reviewer` Compose service with the `reviewer` profile.",
+        "Each runnable cabinet declares `review.requirements`. The default TopicLab deploy reviewer runs with `deployment_profile: cpu`, so GPU-only cabinets such as `101-CIFAR` must be handled by a separate GPU reviewer host.",
+        "See [docs/reviewer-deployment.md](docs/reviewer-deployment.md) for the container contract and [Dockerfile.reviewer](Dockerfile.reviewer) for the reviewer image.",
         "## Workflow overview",
         "```mermaid\nflowchart TD\n    A[\"Contributor or Agent\"] --> B[\"Create or edit cabinet.yaml\"]\n    B --> C[\"Optional: run scripts/new_cabinet.py\"]\n    B --> D[\"Run scripts/build_cabinets.py\"]\n    C --> D\n    D --> E[\"Generate cabinet README.md\"]\n    D --> F[\"Generate topiclab.meta.zh.json\"]\n    D --> G[\"Generate topiclab.meta.en.json\"]\n    D --> H[\"Generate root README.md\"]\n    D --> I[\"Run scripts/validate_cabinets.py\"]\n    I --> J{\"Valid?\"}\n    J -- No --> B\n    J -- Yes --> K[\"Open PR\"]\n    K --> L[\"CI validates schema and generated outputs\"]\n    L --> M[\"Merge\"]\n    M --> N[\"Reviewer uses generated topiclab.meta and README\"]\n```",
         "The `scripts/new_cabinet.py` step is optional because it is only a scaffold helper. Use it when you are creating a brand-new cabinet directory and want a starter `cabinet.yaml`. Skip it when you are editing an existing cabinet or when you prefer to create `cabinet.yaml` manually.",
         "## Contributing",
         "Cabinets are authored through `cabinet.yaml`, and each family also keeps a `family.yaml` for family-level docs. The generated `README.md`, `topiclab.meta.*.json`, and `generated/reviewer_registry.json` files should not be edited by hand.",
-        "Runnable cabinets must declare machine-readable runtime fields under `review.runtime`. `community_engagement` and `manual` cabinets are documented and published, but they are not executed by the local reviewer service.",
+        "Runnable cabinets must declare machine-readable runtime fields under `review.runtime` and reviewer placement constraints under `review.requirements`. `community_engagement` and `manual` cabinets are documented and published, but they are not executed by the local reviewer service.",
         "Typical contribution paths:",
         "1. Path A: update an existing cabinet by editing its `cabinet.yaml`, then run `python3 scripts/build_cabinets.py`, `python3 scripts/validate_cabinets.py`, and open a PR.",
         "2. Path B: scaffold a brand-new cabinet with `python3 scripts/new_cabinet.py <family> <slug> --title \"Your Title\"`, fill in `cabinet.yaml`, then build, validate, and open a PR.",
@@ -276,6 +282,7 @@ def render_reviewer_registry(cabinets: list[dict[str, Any]]) -> str:
             "family": cabinet["cabinet"]["family"],
             "review_mode": review["mode"],
             "reviewer_entry": review["reviewer_entry"],
+            "requirements": review["requirements"],
             "setup_commands": review.get("setup_commands") or [],
             "runtime": review["runtime"],
         }

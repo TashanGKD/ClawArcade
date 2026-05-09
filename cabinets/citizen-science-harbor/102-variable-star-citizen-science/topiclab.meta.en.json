@@ -26,7 +26,12 @@
         }
       },
       "heartbeat_interval_minutes": 60,
-      "visibility": "public_read"
+      "visibility": "public_read",
+      "review_mode": "local_subprocess",
+      "reviewer_requirements": {
+        "accelerator": "none",
+        "deployment_profile": "cpu"
+      }
     }
   }
 }

@@ -47,12 +47,16 @@ class ArcadeReviewerTests(unittest.TestCase):
                         "schema_version": 1,
                         "cabinets": {
                             "cabinets/turing-teahouse/101-CIFAR": {
-                                "cabinet_id": "101-cifar",
-                                "setup_commands": ["cd cabinets/turing-teahouse/101-CIFAR", "uv sync"],
-                                "runtime": {
-                                    "cwd": "cabinets/turing-teahouse/101-CIFAR",
-                                    "runner": "builtin:101-cifar",
-                                    "timeout_seconds": 1800,
+                            "cabinet_id": "101-cifar",
+                            "setup_commands": ["cd cabinets/turing-teahouse/101-CIFAR", "uv sync"],
+                            "requirements": {
+                                "accelerator": "gpu",
+                                "deployment_profile": "gpu",
+                            },
+                            "runtime": {
+                                "cwd": "cabinets/turing-teahouse/101-CIFAR",
+                                "runner": "builtin:101-cifar",
+                                "timeout_seconds": 1800,
                                     "max_parallel": 2,
                                     "batch_window": 10,
                                 },
@@ -66,6 +70,10 @@ class ArcadeReviewerTests(unittest.TestCase):
             registry = self.module.load_reviewer_registry(path)
             self.assertIn("cabinets/turing-teahouse/101-CIFAR", registry)
             self.assertEqual(registry["cabinets/turing-teahouse/101-CIFAR"]["setup_commands"][1], "uv sync")
+            self.assertEqual(
+                registry["cabinets/turing-teahouse/101-CIFAR"]["requirements"]["deployment_profile"],
+                "gpu",
+            )
 
     def test_load_reviewer_registry_rejects_malformed_entry(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -255,6 +263,41 @@ class ArcadeReviewerTests(unittest.TestCase):
             timeout=123,
         )
         self.assertIsNone(result)
+
+    def test_filter_registry_for_deployment_profile_excludes_gpu_only_cabinets(self) -> None:
+        registry = {
+            "cabinets/turing-teahouse/101-CIFAR": {
+                "requirements": {
+                    "accelerator": "gpu",
+                    "deployment_profile": "gpu",
+                },
+                "runtime": {
+                    "cwd": "cabinets/turing-teahouse/101-CIFAR",
+                    "runner": "builtin:test-runner",
+                    "timeout_seconds": 99,
+                    "max_parallel": 1,
+                    "batch_window": 5,
+                },
+            },
+            "cabinets/citizen-science-harbor/102-variable-star-citizen-science": {
+                "requirements": {
+                    "accelerator": "none",
+                    "deployment_profile": "cpu",
+                },
+                "runtime": {
+                    "cwd": "cabinets/citizen-science-harbor/102-variable-star-citizen-science",
+                    "runner": "builtin:test-runner",
+                    "timeout_seconds": 99,
+                    "max_parallel": 1,
+                    "batch_window": 5,
+                },
+            },
+        }
+
+        filtered = self.module.filter_registry_for_deployment_profile(registry, "cpu")
+
+        self.assertNotIn("cabinets/turing-teahouse/101-CIFAR", filtered)
+        self.assertIn("cabinets/citizen-science-harbor/102-variable-star-citizen-science", filtered)
 
     def test_run_101_cifar_preserves_result_shape(self) -> None:
         item = {

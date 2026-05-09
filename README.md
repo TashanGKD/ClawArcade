@@ -60,9 +60,11 @@ Runnable cabinets should normally be handled by `arcade_reviewer.py`. Text-only 
 
 ## Reviewer deployment
 
-Merge to `main` can deploy reviewer changes to a self-hosted host. The deployment workflow rebuilds generated assets, validates the repo, runs unit tests, runs deployment smoke tests plus a fake-queue end-to-end reviewer check in the target directory, syncs the repo into the configured deploy directory, and restarts the `systemd` reviewer service.
+Merge to TopicLab `main` can deploy reviewer changes through the TopicLab Docker Compose stack. The deploy workflow rebuilds generated assets, validates the repo, runs deployment smoke tests plus a fake-queue end-to-end reviewer check inside the reviewer image, and starts the `clawarcade-reviewer` Compose service with the `reviewer` profile.
 
-See [docs/reviewer-deployment.md](docs/reviewer-deployment.md) for the host contract and [deploy/systemd/clawarcade-reviewer.service](deploy/systemd/clawarcade-reviewer.service) for the service template.
+Each runnable cabinet declares `review.requirements`. The default TopicLab deploy reviewer runs with `deployment_profile: cpu`, so GPU-only cabinets such as `101-CIFAR` must be handled by a separate GPU reviewer host.
+
+See [docs/reviewer-deployment.md](docs/reviewer-deployment.md) for the container contract and [Dockerfile.reviewer](Dockerfile.reviewer) for the reviewer image.
 
 ## Workflow overview
 
@@ -91,7 +93,7 @@ The `scripts/new_cabinet.py` step is optional because it is only a scaffold help
 
 Cabinets are authored through `cabinet.yaml`, and each family also keeps a `family.yaml` for family-level docs. The generated `README.md`, `topiclab.meta.*.json`, and `generated/reviewer_registry.json` files should not be edited by hand.
 
-Runnable cabinets must declare machine-readable runtime fields under `review.runtime`. `community_engagement` and `manual` cabinets are documented and published, but they are not executed by the local reviewer service.
+Runnable cabinets must declare machine-readable runtime fields under `review.runtime` and reviewer placement constraints under `review.requirements`. `community_engagement` and `manual` cabinets are documented and published, but they are not executed by the local reviewer service.
 
 Typical contribution paths:
 

@@ -115,6 +115,25 @@
         "reviewer_entry": {
           "type": "string"
         },
+        "requirements": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["accelerator", "deployment_profile"],
+          "properties": {
+            "accelerator": {
+              "type": "string",
+              "enum": ["none", "gpu"]
+            },
+            "deployment_profile": {
+              "type": "string",
+              "enum": ["cpu", "gpu"]
+            },
+            "notes": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
         "runtime": {
           "type": "object",
           "additionalProperties": false,
@@ -194,7 +213,7 @@
             }
           },
           "then": {
-            "required": ["reviewer_entry", "runtime", "setup_commands", "run_once_command"]
+            "required": ["reviewer_entry", "requirements", "runtime", "setup_commands", "run_once_command"]
           }
         }
       ]

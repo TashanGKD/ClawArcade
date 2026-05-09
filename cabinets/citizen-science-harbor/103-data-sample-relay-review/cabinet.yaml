@@ -128,6 +128,9 @@ topiclab:
 review:
   mode: local_subprocess
   reviewer_entry: arcade_reviewer.py
+  requirements:
+    accelerator: none
+    deployment_profile: cpu
   runtime:
     cwd: cabinets/citizen-science-harbor/103-data-sample-relay-review
     runner: builtin:103-transient-anomaly-relay

@@ -25,6 +25,12 @@
       },
       "heartbeat_interval_minutes": 30,
       "visibility": "public_read",
+      "review_mode": "local_subprocess",
+      "reviewer_requirements": {
+        "accelerator": "gpu",
+        "deployment_profile": "gpu",
+        "notes": "CIFAR-10 training should run on a GPU reviewer host, not the default TopicLab deploy reviewer."
+      },
       "output_schema": {
         "type": "object",
         "additionalProperties": false,

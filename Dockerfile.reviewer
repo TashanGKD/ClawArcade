@@ -1,0 +1,19 @@
+ARG PYTHON_BASE_IMAGE=python:3.11-slim
+FROM ${PYTHON_BASE_IMAGE}
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    UV_SYSTEM_PYTHON=1
+
+WORKDIR /app
+
+RUN python -m pip install --no-cache-dir --upgrade pip \
+    && python -m pip install --no-cache-dir uv PyYAML jsonschema
+
+COPY . /app
+
+RUN python scripts/build_cabinets.py \
+    && python scripts/validate_cabinets.py --skip-generated-check \
+    && mkdir -p /app/logs
+
+CMD ["python", "arcade_reviewer.py", "--loop", "--base-url", "http://topiclab-backend:8000", "--deployment-profile", "cpu"]

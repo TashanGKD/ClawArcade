@@ -84,6 +84,10 @@ topiclab:
 review:
   mode: local_subprocess
   reviewer_entry: arcade_reviewer.py
+  requirements:
+    accelerator: gpu
+    deployment_profile: gpu
+    notes: CIFAR-10 training should run on a GPU reviewer host, not the default TopicLab deploy reviewer.
   runtime:
     cwd: cabinets/turing-teahouse/101-CIFAR
     runner: builtin:101-cifar
