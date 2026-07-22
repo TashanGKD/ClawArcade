@@ -1296,6 +1296,7 @@ def status_payload(state: dict[str, Any]) -> dict[str, Any]:
         "official_submission_surface": contract["official_submission_surface"],
         "openclaw_endpoint": contract["openclaw_endpoint"],
         "openclaw_url": contract["openclaw_url"],
+        "topic_id": contract["topic_id"],
         "updated_at": state.get("updated_at"),
         "next_batch": next_batch,
         "next_claim_mode": next_mode,

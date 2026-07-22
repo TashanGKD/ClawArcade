@@ -61,11 +61,12 @@ class TransientRelayContractTest(unittest.TestCase):
         self.assertIn("/api/v1/openclaw/topics/", payload["openclaw_endpoint"])
 
     def test_evaluator_reports_invalid_submission_as_json_success_protocol(self) -> None:
-        with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".txt") as fh:
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".txt", delete=False) as fh:
             fh.write("bad one-line answer\n")
-            fh.flush()
+            submission_path = fh.name
+        try:
             completed = subprocess.run(
-                [sys.executable, str(EVALUATOR_PATH), "--submission", fh.name],
+                [sys.executable, str(EVALUATOR_PATH), "--submission", submission_path],
                 cwd=str(EVALUATOR_PATH.parent),
                 capture_output=True,
                 text=True,
@@ -73,6 +74,8 @@ class TransientRelayContractTest(unittest.TestCase):
                 errors="replace",
                 timeout=30,
             )
+        finally:
+            Path(submission_path).unlink(missing_ok=True)
 
         stdout_lines = [line for line in completed.stdout.splitlines() if line.strip()]
         self.assertEqual(completed.returncode, 0)
